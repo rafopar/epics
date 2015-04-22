@@ -20,7 +20,11 @@ bool Fit_2c21(TGraph *, string);
 int main( int argc, char **argv)
 {
   TApplication *app1 = new TApplication("", 0, NULL);
-  
+
+  TLatex *lat1 = new TLatex();
+  lat1->SetNDC();
+
+
   if( argc ==1 )
     {
       cout<<"PLease specify at least the harp_name"<<endl;
@@ -82,13 +86,17 @@ int main( int argc, char **argv)
   gr_[14] = new TGraph(Form("%s/%s", all_harp_dir.c_str(), fname.c_str() ), "%lg %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %lg");
 
   c1->Divide(1, 14);
+  lat1->SetTextSize(0.35);
   for( int i = 0; i < n_counters - 1; i++ )
     {
       c1->cd(i+1)->SetTopMargin(0.);
+      c1->cd(i+1)->SetRightMargin(0.);
+      c1->cd(i+1)->SetLeftMargin(0.2);
       gr_[i]->SetMarkerStyle(23);
       gr_[i]->SetMarkerSize(0.2);
       gr_[i]->SetMarkerColor(2);
       gr_[i]->Draw("AP");
+      lat1->DrawLatex(0.01, 0.45, Form("%s", counter_names_[i].c_str()));
     }
 
   if( fit_2c21 )
@@ -508,6 +516,16 @@ double* Calc_abalpha(double sigm45, double sigm_x, double sigm_y)
   else
     {
       a = sqrt(0.5*(A+B+(A-B)/cos(2*alpha)));
+    }
+  
+  if( a < b )
+    {
+      if( alpha > 0 ) {alpha = alpha - PI/2.;}
+      else {alpha = alpha + PI/2.;}
+
+      double tmp = a;
+      a = b;
+      b = tmp;
     }
   
   alpha = alpha*radian;
