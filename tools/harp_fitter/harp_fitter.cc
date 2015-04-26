@@ -63,7 +63,7 @@ int main( int argc, char **argv)
   TCanvas *c1 = new TCanvas("c1", "", 900, 900);
 
   //TGraph *gr1 = new TGraph( "../harp_tagger/harp_tagger_04-20-15_18:26:21.txt", "%lg %*s %*s %*s %*s %*s %lg");
-  TGraph *gr1 = new TGraph( "harp_2H02A_04-19-15_09:21:56.txt", "%lg %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %lg");
+  //TGraph *gr1 = new TGraph( "harp_2H02A_04-19-15_09:21:56.txt", "%lg %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %lg");
   //TGraph *gr1 = new TGraph( "harp_2H02A_04-19-15_12:36:21.txt", "%lg %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %lg");
 
   
@@ -204,11 +204,33 @@ bool Fit_2c21(TGraph *gr, string counter_name)
 
   TSpectrum *sp1 = new TSpectrum();
   
-  sp1->Search(h_gr, 15., "", 0.2);
+  sp1->Search(h_gr, 15., "", 0.09);
 
   float *peak_val_tmp = sp1->GetPositionY();
   float *pos_tmp = sp1->GetPositionX();
-  const int n_peaks = sp1->GetNPeaks();
+  int n_peaks = sp1->GetNPeaks();
+
+  if( n_peaks != 2 )
+    {
+      sp1->Search(h_gr, 15., "", 0.1);
+      peak_val_tmp = sp1->GetPositionY();
+      pos_tmp = sp1->GetPositionX();
+      n_peaks = sp1->GetNPeaks();
+    }
+  if( n_peaks != 2 )
+    {
+      sp1->Search(h_gr, 15., "", 0.08);
+      peak_val_tmp = sp1->GetPositionY();
+      pos_tmp = sp1->GetPositionX();
+      n_peaks = sp1->GetNPeaks();
+    }
+  if( n_peaks != 2 )
+    {
+      sp1->Search(h_gr, 15., "", 0.06);
+      peak_val_tmp = sp1->GetPositionY();
+      pos_tmp = sp1->GetPositionX();
+      n_peaks = sp1->GetNPeaks();
+    }
   
   int n_for_average = 10;
   double bgr_average;
@@ -233,7 +255,7 @@ bool Fit_2c21(TGraph *gr, string counter_name)
       double *pos = gr_peaks->GetX();
       double *peak_val = gr_peaks->GetY();
 
-      string wire_names_[2] = {"X", "Y"};
+      string wire_names_[2] = {"x", "y"};
       double mean_[n_peaks];
       double sigm_[n_peaks];
       double bgr_[n_peaks];
@@ -265,10 +287,20 @@ bool Fit_2c21(TGraph *gr, string counter_name)
 	  lat1->DrawLatex(0.12, 0.70, Form("bgr/peak = %1.1e", bgr_[i]/peak_val[i]));
 	  cout<<"Bgr Average is "<<bgr_average<<endl;
 	  //f_GPol0_[i]->DrawCopy("Same");
+
+
+	  //  Usually data from this counter is better, data from this counter wil go into MYA
+	  if( counter_name == "Upstream_Left" )
+	    {
+	      system(Form("caput HB_BEAM:SCAN:2c21:mean_%s %1.5f", wire_names_[i].c_str(), mean_[i]));
+	      system(Form("caput HB_BEAM:SCAN:2c21:sigma_%s %1.5f", wire_names_[i].c_str(), sigm_[i]));
+	      system(Form("caput HB_BEAM:SCAN:2c21:bgr_peak_ratio_%s %1.7f", wire_names_[i].c_str(), bgr_[i]/peak_val[i]));
+	      system(Form("caput HB_BEAM:SCAN:2c21:peak_%s %1.5f", wire_names_[i].c_str(), peak_val[i]));
+	    }
 	}
       c1->cd(1);
       lat1->SetTextSize(0.04);
-      lat1->DrawLatex(0.1, 0.97, Form("%s/%s", all_harp_dir.c_str(), glob_filename.c_str()));
+      lat1->DrawLatex(0.02, 0.97, Form("%s/%s", all_harp_dir.c_str(), glob_filename.c_str()));
       
       return true;
     }
@@ -296,7 +328,29 @@ bool Fit_tagger(TGraph *gr, string counter_name)
 
   float *peak_val_tmp = sp1->GetPositionY();
   float *pos_tmp = sp1->GetPositionX();
-  const int n_peaks = sp1->GetNPeaks();
+  int n_peaks = sp1->GetNPeaks();
+  
+  if( n_peaks != 3 )
+    {
+      sp1->Search(h_gr, 15., "", 0.1);
+      peak_val_tmp = sp1->GetPositionY();
+      pos_tmp = sp1->GetPositionX();
+      n_peaks = sp1->GetNPeaks();
+    }
+  if( n_peaks != 3 )
+    {
+      sp1->Search(h_gr, 15., "", 0.08);
+      peak_val_tmp = sp1->GetPositionY();
+      pos_tmp = sp1->GetPositionX();
+      n_peaks = sp1->GetNPeaks();
+    }
+  if( n_peaks != 3 )
+    {
+      sp1->Search(h_gr, 15., "", 0.06);
+      peak_val_tmp = sp1->GetPositionY();
+      pos_tmp = sp1->GetPositionX();
+      n_peaks = sp1->GetNPeaks();
+    }
   
   int n_for_average = 10;
   double bgr_average;
@@ -321,7 +375,7 @@ bool Fit_tagger(TGraph *gr, string counter_name)
       double *pos = gr_peaks->GetX();
       double *peak_val = gr_peaks->GetY();
 
-      string wire_names_[3] = {"45 deg", "Y", "X"};
+      string wire_names_[3] = {"45", "y", "x"};
       double mean_[3];
       double sigm_[3];
       double bgr_[3];
@@ -360,13 +414,24 @@ bool Fit_tagger(TGraph *gr, string counter_name)
 	  lat1->DrawLatex(0.12, 0.70, Form("bgr/peak = %1.1e", bgr_[i]/peak_val[i]));
 	  cout<<"Bgr Average is "<<bgr_average<<endl;
 	  //f_GPol0_[i]->DrawCopy("Same");
+
+
+	  if( counter_name == "tagger_right" )
+	    {
+	      cout<<"Testing caput tagger_right"<<endl;
+	      system(Form("caput HB_BEAM:SCAN:tagger:mean_%s %1.5f", wire_names_[i].c_str(), mean_[i]));
+	      system(Form("caput HB_BEAM:SCAN:tagger:sigma_%s %1.5f", wire_names_[i].c_str(), sigm_[i]));
+	      system(Form("caput HB_BEAM:SCAN:tagger:bgr_peak_ratio_%s %1.7f", wire_names_[i].c_str(), bgr_[i]/peak_val[i]));
+	      system(Form("caput HB_BEAM:SCAN:tagger:peak_%s %1.5f", wire_names_[i].c_str(), peak_val[i]));
+	    }
+
 	}
 
-      double *alpha_a_b = Calc_abalpha(sigm_[0], sigm_[2], sigm_[1]);
+      double *alpha_a_b = Calc_abalpha(sigm_[0], sigm_[2]*TMath::Sqrt(2.), sigm_[1]*TMath::Sqrt(2.));
       
       double alpha = alpha_a_b[0];
-      double aa = alpha_a_b[1];
-      double bb = alpha_a_b[2];
+      double aa = alpha_a_b[1]/TMath::Sqrt(2.);
+      double bb = alpha_a_b[2]/TMath::Sqrt(2.);
 
       c1->cd(1);
       lat1->DrawLatex(0.7, 0.85, Form("#alpha = %1.2f deg", alpha));
@@ -374,7 +439,13 @@ bool Fit_tagger(TGraph *gr, string counter_name)
       lat1->DrawLatex(0.7, 0.75, Form("b = %1.2f", bb));
       lat1->SetTextSize(0.04);
       lat1->DrawLatex(0.1, 0.97, Form("%s/%s", all_harp_dir.c_str(), glob_filename.c_str()));
-
+      
+      if( counter_name == "tagger_right" )
+	{
+	  system(Form("caput HB_BEAM:SCAN:tagger:alpha %1.5f", alpha));
+	  system(Form("caput HB_BEAM:SCAN:tagger:a %1.5f", aa));
+	  system(Form("caput HB_BEAM:SCAN:tagger:b %1.7f", bb));
+	}
       return true;
     }
   else
@@ -402,7 +473,29 @@ bool Fit_2H02A(TGraph *gr, string counter_name)
 
   float *peak_val_tmp = sp1->GetPositionY();
   float *pos_tmp = sp1->GetPositionX();
-  const int n_peaks = sp1->GetNPeaks();
+  int n_peaks = sp1->GetNPeaks();
+
+  if( n_peaks != 3 )
+    {
+      sp1->Search(h_gr, 15., "", 0.1);
+      peak_val_tmp = sp1->GetPositionY();
+      pos_tmp = sp1->GetPositionX();
+      n_peaks = sp1->GetNPeaks();
+    }
+  if( n_peaks != 3 )
+    {
+      sp1->Search(h_gr, 15., "", 0.08);
+      peak_val_tmp = sp1->GetPositionY();
+      pos_tmp = sp1->GetPositionX();
+      n_peaks = sp1->GetNPeaks();
+    }
+  if( n_peaks != 3 )
+    {
+      sp1->Search(h_gr, 15., "", 0.06);
+      peak_val_tmp = sp1->GetPositionY();
+      pos_tmp = sp1->GetPositionX();
+      n_peaks = sp1->GetNPeaks();
+    }
   
   int n_for_average = 10;
   double bgr_average;
@@ -427,7 +520,7 @@ bool Fit_2H02A(TGraph *gr, string counter_name)
       double *pos = gr_peaks->GetX();
       double *peak_val = gr_peaks->GetY();
 
-      string wire_names_[3] = {"X", "Y", "45 deg"};
+      string wire_names_[3] = {"x", "y", "45"};
       double mean_[3];
       double sigm_[3];
       double bgr_[3];
@@ -464,15 +557,25 @@ bool Fit_2H02A(TGraph *gr, string counter_name)
 	  lat1->DrawLatex(0.12, 0.80, Form("#sigma = %1.4f mm", sigm_[i]));
 	  lat1->DrawLatex(0.12, 0.75, Form("peak_val = %1.0f", peak_val[i]));
 	  lat1->DrawLatex(0.12, 0.70, Form("bgr/peak = %1.1e", bgr_[i]/peak_val[i]));
+
+	  if( counter_name == "HPS_SC" )
+	    {
+	      cout<<"Testing caput tagger_right"<<endl;
+	      system(Form("caput HB_BEAM:SCAN:2H02A:mean_%s %1.5f", wire_names_[i].c_str(), mean_[i]));
+	      system(Form("caput HB_BEAM:SCAN:2H02A:sigma_%s %1.5f", wire_names_[i].c_str(), sigm_[i]));
+	      system(Form("caput HB_BEAM:SCAN:2H02A:bgr_peak_ratio_%s %1.7f", wire_names_[i].c_str(), bgr_[i]/peak_val[i]));
+	      system(Form("caput HB_BEAM:SCAN:2H02A:peak_%s %1.5f", wire_names_[i].c_str(), peak_val[i]));
+	    }
+
 	  cout<<"Bgr Average is "<<bgr_average<<endl;
 	  //f_GPol0_[i]->DrawCopy("Same");
 	}
 
-      double *alpha_a_b = Calc_abalpha(sigm_[2], sigm_[0], sigm_[1]);
+      double *alpha_a_b = Calc_abalpha(sigm_[2], sigm_[0]*TMath::Sqrt(2.), sigm_[1]*TMath::Sqrt(2.));
       
       double alpha = alpha_a_b[0];
-      double aa = alpha_a_b[1];
-      double bb = alpha_a_b[2];
+      double aa = alpha_a_b[1]/TMath::Sqrt(2.);
+      double bb = alpha_a_b[2]/TMath::Sqrt(2.);
 
       c1->cd(1);
       lat1->DrawLatex(0.7, 0.85, Form("#alpha = %1.2f deg", alpha));
@@ -480,6 +583,14 @@ bool Fit_2H02A(TGraph *gr, string counter_name)
       lat1->DrawLatex(0.7, 0.75, Form("b = %1.2f", bb));
       lat1->SetTextSize(0.04);
       lat1->DrawLatex(0.1, 0.97, Form("%s/%s", all_harp_dir.c_str(), glob_filename.c_str()));
+
+      if( counter_name == "HPS_SC" )
+	{
+	  system(Form("caput HB_BEAM:SCAN:2H02A:alpha %1.5f", alpha));
+	  system(Form("caput HB_BEAM:SCAN:2H02A:a %1.5f", aa));
+	  system(Form("caput HB_BEAM:SCAN:2H02A:b %1.7f", bb));
+	}
+
 
       return true;
     }
