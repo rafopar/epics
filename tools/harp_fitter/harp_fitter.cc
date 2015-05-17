@@ -20,6 +20,7 @@ bool Fit_2c21(TGraph *, string);
 double Arnes_Corr(double , double );
 
 string glob_filename;
+string glob_filename_part;
 string all_harp_dir = "/home/epics/DATA/HARP_SCANS";
 
 int main( int argc, char **argv)
@@ -42,6 +43,7 @@ int main( int argc, char **argv)
   const int n_counters = 15;
   string fname = argv[1];
   glob_filename  = fname;
+  glob_filename_part = fname;
   cout<<"File name is "<<fname<<endl;
   
   //cout<<"Checking the filename"<<fname.find("2c21")<<endl;
@@ -268,8 +270,12 @@ bool Fit_2c21(TGraph *gr, string counter_name)
 	  h_gr_tmp_[i] = (TH1D*)h_gr->Clone(Form("h_gr_%d", i));
 	  f_GPol0_[i] = new TF1(Form("f_GPol0_%d", i), "[0]*TMath::Gaus(x, [1], [2]) + [3]");
 	  double mean_x = pos[i];
+	  h_gr_tmp_[i]->SetAxisRange(mean_x - 8., mean_x + 0.8);
+	  double tmp_RMS = h_gr_tmp_[i]->GetRMS();
+	  
 	  f_GPol0_[i]->SetRange(mean_x - 5., mean_x + 5.);
-	  f_GPol0_[i]->SetParameters(peak_val[i] - bgr_average, pos[i], 0.1, bgr_average);
+	  f_GPol0_[i]->SetParLimits(2, 0., 5.5);
+	  f_GPol0_[i]->SetParameters(peak_val[i] - bgr_average, pos[i], tmp_RMS, bgr_average);
 	  h_gr_tmp_[i]->SetAxisRange(mean_x - 3.5, mean_x + 3.5);
 	  //h_gr_tmp_[i]->Draw();
 	  h_gr_tmp_[i]->Fit(f_GPol0_[i], "+MeV", "", mean_x - 3., mean_x + 3.);
@@ -304,11 +310,12 @@ bool Fit_2c21(TGraph *gr, string counter_name)
       lat1->DrawLatex(0.02, 0.97, Form("%s/%s", all_harp_dir.c_str(), glob_filename.c_str()));
 
       // ============= Now Let's Save the file for the Log Entry ===============
-      string img_path = Form("/home/hpsrun/screenshots/Scan_of_2c21_%s.gif", counter_name.c_str());
       
 
       if( counter_name == "Upstream_Left" )
 	{
+	  glob_filename.erase(1, 12);
+	  string img_path = Form("/home/hpsrun/screenshots/Scan_of_2c21_%s_%s.gif", counter_name.c_str(), glob_filename.c_str());
 	  c1->Print(Form("%s", img_path.c_str()));
 
 	  system(Form("/site/ace/certified/apps/bin/logentry -l HBLOG -t \" Scan of Harp 2C21 \" -a %s ", img_path.c_str()));
@@ -404,6 +411,7 @@ bool Fit_tagger(TGraph *gr, string counter_name)
 	  h_gr_tmp_[i]->SetAxisRange(mean_x - 5., mean_x + 5.);
 	  f_GPol0_[i]->SetRange(mean_x - 5., mean_x + 5.);
 	  //f_GPol0_[i]->SetParameters(peak_val[i] - bgr_average, pos[i], 0.3, bgr_average);
+	  f_GPol0_[i]->SetParLimits(2, 0., 5.5);
 	  f_GPol0_[i]->SetParameters(peak_val[i] - bgr_average, pos[i], h_gr_tmp_[i]->GetRMS(), bgr_average);
 	  //h_gr_tmp_[i]->Draw();
 	  h_gr_tmp_[i]->Fit(f_GPol0_[i], "+MeV", "", mean_x - 4.5, mean_x + 4.5);
@@ -463,10 +471,11 @@ bool Fit_tagger(TGraph *gr, string counter_name)
 	}
 
       // ============= Now Let's Save the file for the Log Entry ===============
-      string img_path = Form("/home/hpsrun/screenshots/Scan_of_harp_tagger_%s.gif", counter_name.c_str());
       
       if( counter_name == "tagger_right" )
 	{
+	  glob_filename.erase(1, 12);
+	  string img_path = Form("/home/hpsrun/screenshots/Scan_of_harp_tagger_%s_%s.gif", counter_name.c_str(), glob_filename.c_str());
 	  c1->Print(Form("%s", img_path.c_str()));
 
 	  system(Form("/site/ace/certified/apps/bin/logentry -l HBLOG -t \" Scan of Harp Tagger \" -a %s ", img_path.c_str()));
@@ -493,6 +502,7 @@ bool Fit_2H02A(TGraph *gr, string counter_name)
   TH1D *h_gr = (TH1D*)Graph2Hist(gr, 10.); // 10 is because 2H02A has motor position im cm, it should be converted into mm
   h_gr->SetTitle("; motor pos (mm)");
   h_gr->Sumw2();
+
 
   TSpectrum *sp1 = new TSpectrum();
   
@@ -571,6 +581,7 @@ bool Fit_2H02A(TGraph *gr, string counter_name)
 	  h_gr_tmp_[i]->SetAxisRange(mean_x - 3., mean_x + 3.);
 
 	  f_GPol0_[i]->SetRange(mean_x - 3., mean_x + 3.);
+	  f_GPol0_[i]->SetParLimits(2, 0., 5.5);
 	  f_GPol0_[i]->SetParameters(peak_val[i] - bgr_average, pos[i], tmp_RMS, bgr_average);
 	  //f_GPol0_[i]->SetParameters(peak_val[i] - bgr_average, pos[i], 0.1, bgr_average);
 	  //h_gr_tmp_[i]->Draw();
@@ -585,6 +596,7 @@ bool Fit_2H02A(TGraph *gr, string counter_name)
 	      mean_[i] = f_GPol0_[i]->GetParameter(1);
 	      sigm_[i] = f_GPol0_[i]->GetParameter(2);
 	    }
+	  cout<<"sigm  = "<<sigm_[i]<<endl;
 	  sigm_[i] = sigm_[i]/Arnes_Corr(sigm_[i], 0.025);
 	  
 	  bgr_[i] = f_GPol0_[i]->GetParameter(3);
@@ -630,13 +642,15 @@ bool Fit_2H02A(TGraph *gr, string counter_name)
 	}
       
       // ============= Now Let's Save the file for the Log Entry ===============
-      string img_path = Form("/home/hpsrun/screenshots/Scan_of_harp_2H02A_%s.gif", counter_name.c_str());
       
       if( counter_name == "HPS_SC" )
 	{
+	  glob_filename_part.erase(1, 12);
+	  string img_path = Form("/home/hpsrun/screenshots/Scan_of_harp_2H02A_%s_%s.gif", counter_name.c_str(), glob_filename_part.c_str());
 	  c1->Print(Form("%s", img_path.c_str()));
 
-	  system(Form("/site/ace/certified/apps/bin/logentry -l HBLOG -t \" Scan of Harp 2H02A \" -a %s ", img_path.c_str()));
+	  //system(Form("/site/ace/certified/apps/bin/logentry -l HBLOG -t \" Scan of Harp 2H02A \" -a %s ", img_path.c_str()));
+	  system(Form("/site/ace/certified/apps/bin/logentry -l TLOG -t \" Scan of Harp 2H02A \" -a %s ", img_path.c_str()));
 	}
 
 
