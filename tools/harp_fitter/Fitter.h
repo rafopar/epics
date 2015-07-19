@@ -53,6 +53,9 @@ private:
   TF1 *f_1st_peak, *f_2nd_peak, *f_3rd_peak;
   TH1D *h_1st_peak, *h_2nd_peak, *h_3rd_peak;
 
+  TH1D *h_gr_tmp; // This will be used in the Graph2Hist method, 
+  // When a hist will be created it will be assigned to h_gr_tmp;
+
   double *pars_bgr_1st_peak, *pars_A_1st_peak, *pars_mean_1st_peak, *pars_sigm_1st_peak, *range_1st_peak;
   double *pars_bgr_2nd_peak, *pars_A_2nd_peak, *pars_mean_2nd_peak, *pars_sigm_2nd_peak, *range_2nd_peak;
   double *pars_bgr_3rd_peak, *pars_A_3rd_peak, *pars_mean_3rd_peak, *pars_sigm_3rd_peak, *range_3rd_peak;
@@ -67,6 +70,11 @@ public:
   void GetComments();
   void SubmitToLogbook();
   bool Fit_2c21(TGraph *, std::string );
+  bool Fit_tagger(TGraph *, std::string );
+  bool Fit_2H02A(TGraph *, std::string );
   bool Search_2c21_peaks(TGraph *);
+  bool Search_three_peaks(TGraph *);
   void Set_Fit_Pars();
+  TH1D *Graph2Hist(TGraph *, double );
+  void Load_Fit_Pars();
 };

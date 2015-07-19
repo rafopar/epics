@@ -24,7 +24,7 @@ using namespace std;
 
 const string Fitter::all_harps_dir = "/home/epics/DATA/HARP_SCANS/";
 
-TH1D *Graph2Hist(TGraph *, double );
+double* Calc_abalpha(double, double, double );
 double Arnes_Corr(double , double );
 
 Fitter::Fitter(const TGWindow *p,UInt_t w,UInt_t h, string fname)
@@ -143,6 +143,8 @@ void Fitter::InitData( string fname )
       fit_2H02A = true;
       harp_name = "harp_2H02A";
     }
+  
+  cout<<"fit_tagger = "<<fit_tagger<<endl;
 
   gr_[0] = new TGraph(Form("%s", fname.c_str() ), "%lg %*s %lg");
   gr_[1] = new TGraph(Form("%s", fname.c_str() ), "%lg %*s %*s %lg");
@@ -231,8 +233,8 @@ void Fitter::FitData( bool manual_fit, bool preview )
       else
 	{
 	  if( fit_2c21 ) { good_parameters = Search_2c21_peaks( gr_[counter_ind]); }
-	  else if( fit_tagger ) {}
-	  else if( fit_2H02A ) {}
+	  else if( fit_tagger ) { good_parameters = Search_three_peaks( gr_[counter_ind]);}
+	  else if( fit_2H02A )  { good_parameters = Search_three_peaks( gr_[counter_ind]);}
 	}
       
       if( good_parameters )
@@ -241,6 +243,26 @@ void Fitter::FitData( bool manual_fit, bool preview )
 	    {
 	      Fit_2c21(gr_[counter_ind], counter_names_[counter_ind]);
 	    }
+	  else if( fit_tagger )
+	    {
+	      Fit_tagger(gr_[counter_ind], counter_names_[counter_ind]);
+	    }
+	  else if( fit_2H02A )
+	    {
+	      Fit_2H02A(gr_[counter_ind], counter_names_[counter_ind]);
+	    }
+	}
+      else
+	{
+	  TCanvas *c1 = fEcanvas->GetCanvas();
+	  c1->Clear();
+	  c1->cd();
+	  
+	  gr_[counter_ind]->SetMarkerColor(2);
+	  gr_[counter_ind]->SetMarkerStyle(20);
+	  gr_[counter_ind]->SetMarkerSize(0.45);
+	  gr_[counter_ind]->Draw("AP");
+	  c1->Update();
 	}
       
     }
@@ -437,7 +459,7 @@ void Fitter::Set_Fit_Pars()
 
   TGLabel *lbl_2nd_peak_mean = new TGLabel(f_2nd_peak_mean, "2nd peak, mean:         value");
   f_2nd_peak_mean->AddFrame(lbl_2nd_peak_mean, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Second_peak_mean = new TGNumberEntry(f_2nd_peak_mean, 25., 10);
+  Second_peak_mean = new TGNumberEntry(f_2nd_peak_mean, 45., 10);
   Second_peak_mean->SetLimitValues(0., 1.e7);
   f_2nd_peak_mean->AddFrame(Second_peak_mean, new TGLayoutHints(kLHintsLeft,2,2,2,2));
   
@@ -448,7 +470,7 @@ void Fitter::Set_Fit_Pars()
 
   TGLabel *lbl_2nd_peak_mean_max = new TGLabel(f_2nd_peak_mean, "       max");
   f_2nd_peak_mean->AddFrame(lbl_2nd_peak_mean_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Second_peak_mean_max = new TGNumberEntry(f_2nd_peak_mean, 60., 10);
+  Second_peak_mean_max = new TGNumberEntry(f_2nd_peak_mean, 70., 10);
   f_2nd_peak_mean->AddFrame(Second_peak_mean_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
   TGCompositeFrame *f_2nd_peak_sigm = new TGCompositeFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
 
@@ -521,7 +543,7 @@ void Fitter::Set_Fit_Pars()
 
   TGLabel *lbl_3rd_peak_mean = new TGLabel(f_3rd_peak_mean, "3rd peak, mean:         value");
   f_3rd_peak_mean->AddFrame(lbl_3rd_peak_mean, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Third_peak_mean = new TGNumberEntry(f_3rd_peak_mean, 50., 10);
+  Third_peak_mean = new TGNumberEntry(f_3rd_peak_mean, 65., 10);
   Third_peak_mean->SetLimitValues(0., 1.e7);
   f_3rd_peak_mean->AddFrame(Third_peak_mean, new TGLayoutHints(kLHintsLeft,2,2,2,2));
   
@@ -532,7 +554,7 @@ void Fitter::Set_Fit_Pars()
 
   TGLabel *lbl_3rd_peak_mean_max = new TGLabel(f_3rd_peak_mean, "       max");
   f_3rd_peak_mean->AddFrame(lbl_3rd_peak_mean_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Third_peak_mean_max = new TGNumberEntry(f_3rd_peak_mean, 80., 10);
+  Third_peak_mean_max = new TGNumberEntry(f_3rd_peak_mean, 95., 10);
   f_3rd_peak_mean->AddFrame(Third_peak_mean_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
   TGCompositeFrame *f_3rd_peak_sigm = new TGCompositeFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
 
@@ -584,6 +606,11 @@ void Fitter::Set_Fit_Pars()
       f_Main_FitPars->AddFrame(f_3rd_peak_Fit_Range, new TGLayoutHints(kLHintsTop,2,2,2,2)); 
     }
   TGHorizontalFrame *f_buttons = new TGHorizontalFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
+
+  TGTextButton *b_load_pars = new TGTextButton(f_buttons, "  &Load Parameters from Fit  ");
+  b_load_pars->Connect("Clicked()", "Fitter", this, "Load_Fit_Pars()");
+  f_buttons->AddFrame(b_load_pars, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
+
   TGTextButton *b_Preview = new TGTextButton(f_buttons, " &Preview ");
   b_Preview->Connect("Clicked()", "Fitter", this, "FitData(=true, true)");
   f_buttons->AddFrame(b_Preview, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
@@ -591,6 +618,7 @@ void Fitter::Set_Fit_Pars()
   TGTextButton *b_Fit = new TGTextButton(f_buttons, "    &Fit    ");
   b_Fit->Connect("Clicked()", "Fitter", this, "FitData(=true, false)");
   f_buttons->AddFrame(b_Fit, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
+
 
   f_Main_FitPars->AddFrame(f_buttons, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
 
@@ -602,6 +630,34 @@ void Fitter::Set_Fit_Pars()
   f_Main_FitPars->Resize(f_Main_FitPars->GetDefaultSize()); 
   // Map main frame 
   f_Main_FitPars->MapWindow();
+
+}
+
+void Fitter::Load_Fit_Pars()
+{
+  First_peak_bgr->SetNumber(f_1st_peak->GetParameter(3));
+  First_peak_A->SetNumber(f_1st_peak->GetParameter(0));
+  First_peak_mean->SetNumber(f_1st_peak->GetParameter(1));
+  First_peak_sigm->SetNumber(f_1st_peak->GetParameter(2));
+  First_peak_range_min->SetNumber(f_1st_peak->GetParameter(1) - 2.);
+  First_peak_range_max->SetNumber(f_1st_peak->GetParameter(1) + 2.);
+  
+  Second_peak_bgr->SetNumber(f_2nd_peak->GetParameter(3));
+  Second_peak_A->SetNumber(f_2nd_peak->GetParameter(0));
+  Second_peak_mean->SetNumber(f_2nd_peak->GetParameter(1));
+  Second_peak_sigm->SetNumber(f_2nd_peak->GetParameter(2));
+  Second_peak_range_min->SetNumber(f_2nd_peak->GetParameter(1) - 2.);
+  Second_peak_range_max->SetNumber(f_2nd_peak->GetParameter(1) + 2.);
+
+  if( fit_tagger || fit_2H02A )
+    {
+      Third_peak_bgr->SetNumber(f_3rd_peak->GetParameter(3));
+      Third_peak_A->SetNumber(f_3rd_peak->GetParameter(0));
+      Third_peak_mean->SetNumber(f_3rd_peak->GetParameter(1));
+      Third_peak_sigm->SetNumber(f_3rd_peak->GetParameter(2));
+      Third_peak_range_min->SetNumber(f_3rd_peak->GetParameter(1) - 2.);
+      Third_peak_range_max->SetNumber(f_3rd_peak->GetParameter(1) + 2.);
+    }
 
 }
 
@@ -682,6 +738,117 @@ bool Fitter::Search_2c21_peaks(TGraph *gr)
       pars_sigm_2nd_peak[0] = tmp_RMS; pars_sigm_2nd_peak[1] = 0.001*tmp_RMS; pars_sigm_2nd_peak[2] = 100*tmp_RMS;
       range_2nd_peak[0] = mean_x - 3.5; range_2nd_peak[1] = mean_x + 3.5;
 
+      return true;
+      
+      delete h_gr_tmp;
+    }
+  else
+    {
+      return false;
+    }
+
+}
+
+
+bool Fitter::Search_three_peaks(TGraph *gr)
+{
+  
+    TH1D *h_gr;
+    
+    if( fit_tagger )
+      {
+	h_gr = (TH1D*)Graph2Hist(gr, 1.); // 1 No need to convert to mm, motor position of 2c21 is already in mm
+      }
+    else if( fit_2H02A )
+      {
+	h_gr = (TH1D*)Graph2Hist(gr, 10.); // 10 is because 2H02A has motor position im cm, it should be converted into mm
+      }
+
+
+  h_gr->SetTitle("; motor pos (mm)");
+  h_gr->Sumw2();
+  int N_hist_bins = h_gr->GetNbinsX();
+
+  TSpectrum *sp1 = new TSpectrum();
+  
+  sp1->Search(h_gr, 15., "", 0.09);
+
+  float *peak_val_tmp = sp1->GetPositionY();
+  float *pos_tmp = sp1->GetPositionX();
+  int n_peaks = sp1->GetNPeaks();
+
+  if( n_peaks != 3 )
+    {
+      sp1->Search(h_gr, 15., "", 0.1);
+      peak_val_tmp = sp1->GetPositionY();
+      pos_tmp = sp1->GetPositionX();
+      n_peaks = sp1->GetNPeaks();
+    }
+  if( n_peaks != 3 )
+    {
+      sp1->Search(h_gr, 15., "", 0.08);
+      peak_val_tmp = sp1->GetPositionY();
+      pos_tmp = sp1->GetPositionX();
+      n_peaks = sp1->GetNPeaks();
+    }
+  if( n_peaks != 3 )
+    {
+      sp1->Search(h_gr, 15., "", 0.06);
+      peak_val_tmp = sp1->GetPositionY();
+      pos_tmp = sp1->GetPositionX();
+      n_peaks = sp1->GetNPeaks();
+    }
+
+  int n_for_average = 5;
+  double bgr_average;
+  for( int i = 0; i < n_for_average; i++ )
+    {
+      bgr_average = bgr_average + h_gr->GetBinContent(i) + h_gr->GetBinContent(N_hist_bins - i - 5);
+    }
+  bgr_average = bgr_average/double(2*n_for_average);
+  
+  if( n_peaks == 3 )
+    {
+      TGraph *gr_peaks = new TGraph(n_peaks, pos_tmp, peak_val_tmp);
+      gr_peaks->Sort();
+      double *pos = gr_peaks->GetX();
+      double *peak_val = gr_peaks->GetY();
+
+      TH1D *h_gr_tmp = (TH1D*)h_gr->Clone("h_gr_tmp");
+
+      double mean_x = pos[0];
+      h_gr_tmp->SetAxisRange(mean_x - 8., mean_x + 0.8);
+      double tmp_RMS = h_gr_tmp->GetRMS();
+      double tmp_Ampl = h_gr_tmp->GetMaximum() - bgr_average;
+      
+      pars_bgr_1st_peak[0] = bgr_average; pars_bgr_1st_peak[1] = 0.; pars_bgr_1st_peak[2] = 10*bgr_average;
+      pars_A_1st_peak[0] = tmp_Ampl; pars_A_1st_peak[1] = 0.1*tmp_Ampl; pars_A_1st_peak[2] = 1.5 *tmp_Ampl;
+      pars_mean_1st_peak[0] = mean_x; pars_mean_1st_peak[1] = mean_x - 2; pars_mean_1st_peak[2] = mean_x + 2.;
+      pars_sigm_1st_peak[0] = tmp_RMS; pars_sigm_1st_peak[1] = 0.001*tmp_RMS; pars_sigm_1st_peak[2] = 100*tmp_RMS;
+      range_1st_peak[0] = mean_x - 3.5; range_1st_peak[1] = mean_x + 3.5;
+
+      mean_x = pos[1];
+      h_gr_tmp->SetAxisRange(mean_x - 8., mean_x + 0.8);
+      tmp_RMS = h_gr_tmp->GetRMS();
+      tmp_Ampl = h_gr_tmp->GetMaximum() - bgr_average;
+      
+      pars_bgr_2nd_peak[0] = bgr_average; pars_bgr_2nd_peak[1] = 0.; pars_bgr_2nd_peak[2] = 10*bgr_average;
+      pars_A_2nd_peak[0] = tmp_Ampl; pars_A_2nd_peak[1] = 0.1*tmp_Ampl; pars_A_2nd_peak[2] = 1.5 *tmp_Ampl;
+      pars_mean_2nd_peak[0] = mean_x; pars_mean_2nd_peak[1] = mean_x - 2; pars_mean_2nd_peak[2] = mean_x + 2.;
+      pars_sigm_2nd_peak[0] = tmp_RMS; pars_sigm_2nd_peak[1] = 0.001*tmp_RMS; pars_sigm_2nd_peak[2] = 100*tmp_RMS;
+      range_2nd_peak[0] = mean_x - 3.5; range_2nd_peak[1] = mean_x + 3.5;
+
+      mean_x = pos[2];
+      h_gr_tmp->SetAxisRange(mean_x - 8., mean_x + 0.8);
+      tmp_RMS = h_gr_tmp->GetRMS();
+      tmp_Ampl = h_gr_tmp->GetMaximum() - bgr_average;
+      
+      pars_bgr_3rd_peak[0] = bgr_average; pars_bgr_3rd_peak[1] = 0.; pars_bgr_3rd_peak[2] = 10*bgr_average;
+      pars_A_3rd_peak[0] = tmp_Ampl; pars_A_3rd_peak[1] = 0.1*tmp_Ampl; pars_A_3rd_peak[2] = 1.5 *tmp_Ampl;
+      pars_mean_3rd_peak[0] = mean_x; pars_mean_3rd_peak[1] = mean_x - 2; pars_mean_3rd_peak[2] = mean_x + 2.;
+      pars_sigm_3rd_peak[0] = tmp_RMS; pars_sigm_3rd_peak[1] = 0.001*tmp_RMS; pars_sigm_3rd_peak[2] = 100*tmp_RMS;
+      range_3rd_peak[0] = mean_x - 3.5; range_3rd_peak[1] = mean_x + 3.5;
+      
       return true;
       
       delete h_gr_tmp;
@@ -806,27 +973,12 @@ bool Fitter::Fit_2c21(TGraph *gr, string counter_name)
       lat1->SetTextSize(0.03);
       //lat1->DrawLatex(0.02, 0.97, Form("%s/%s", all_harp_dir.c_str(), glob_filename.c_str()));
 
-      // ============= Now Let's Save the file for the Log Entry ===============
-      
-
-//       if( counter_name == "Upstream_Left" )
-// 	{
-// 	  glob_filename.erase(1, 12);
-// 	  string img_path = Form("/home/hpsrun/screenshots/Scan_of_2c21_%s_%s.gif", counter_name.c_str(), glob_filename.c_str());
-// 	  c1->Print(Form("%s", img_path.c_str()));
-
-// 	  system(Form("/site/ace/certified/apps/bin/logentry -l HBLOG -t \" Scan of Harp 2C21 \" -a %s ", img_path.c_str()));
-// 	}
-      
       return true;
     }
 
 }
 
-
-
-/*
-bool Fitter::Fit_2c21(TGraph *gr, string counter_name)
+bool Fitter::Fit_tagger(TGraph *gr, string counter_name)
 {
   TLatex *lat1 = new TLatex();
   lat1->SetNDC();
@@ -834,144 +986,323 @@ bool Fitter::Fit_2c21(TGraph *gr, string counter_name)
   TCanvas *c1 = fEcanvas->GetCanvas();
   c1->Clear();
 
-  TH1D *h_gr = (TH1D*)Graph2Hist(gr, 1.); // 1 No need to convert to mm, motor position of 2c21 is already in mm
-  h_gr->SetTitle("; motor pos (mm)");
-  h_gr->Sumw2();
-  int N_hist_bins = h_gr->GetNbinsX();
+  h_1st_peak = (TH1D*)Graph2Hist(gr, 1.); // 1 No need to convert to mm, motor position of 2c21 is already in mm
+  h_1st_peak->SetTitle("; motor pos (mm)");
+  h_1st_peak->Sumw2();
 
-  TSpectrum *sp1 = new TSpectrum();
+  h_2nd_peak = (TH1D*)h_1st_peak->Clone("h_2nd_peak");
+  h_3rd_peak = (TH1D*)h_1st_peak->Clone("h_3nd_peak");
+    
+  h_1st_peak->SetAxisRange(range_1st_peak[0], range_1st_peak[1], "X");
+  f_1st_peak->SetParLimits(0, pars_A_1st_peak[1], pars_A_1st_peak[2]);
+  f_1st_peak->SetParLimits(1, pars_mean_1st_peak[1], pars_mean_1st_peak[2]);
+  f_1st_peak->SetParLimits(2, pars_sigm_1st_peak[1], pars_sigm_1st_peak[2]);
+  f_1st_peak->SetParLimits(3, pars_bgr_1st_peak[1], pars_bgr_1st_peak[2]);
+  f_1st_peak->SetParameters(pars_A_1st_peak[0], pars_mean_1st_peak[0], pars_sigm_1st_peak[0], pars_bgr_1st_peak[0]);
   
-  sp1->Search(h_gr, 15., "", 0.09);
-
-  float *peak_val_tmp = sp1->GetPositionY();
-  float *pos_tmp = sp1->GetPositionX();
-  int n_peaks = sp1->GetNPeaks();
-
-  if( n_peaks != 2 )
-    {
-      sp1->Search(h_gr, 15., "", 0.1);
-      peak_val_tmp = sp1->GetPositionY();
-      pos_tmp = sp1->GetPositionX();
-      n_peaks = sp1->GetNPeaks();
-    }
-  if( n_peaks != 2 )
-    {
-      sp1->Search(h_gr, 15., "", 0.08);
-      peak_val_tmp = sp1->GetPositionY();
-      pos_tmp = sp1->GetPositionX();
-      n_peaks = sp1->GetNPeaks();
-    }
-  if( n_peaks != 2 )
-    {
-      sp1->Search(h_gr, 15., "", 0.06);
-      peak_val_tmp = sp1->GetPositionY();
-      pos_tmp = sp1->GetPositionX();
-      n_peaks = sp1->GetNPeaks();
-    }
+  h_2nd_peak->SetAxisRange(range_2nd_peak[0], range_2nd_peak[1], "X");
+  f_2nd_peak->SetParLimits(0, pars_A_2nd_peak[1], pars_A_2nd_peak[2]);
+  f_2nd_peak->SetParLimits(1, pars_mean_2nd_peak[1], pars_mean_2nd_peak[2]);
+  f_2nd_peak->SetParLimits(2, pars_sigm_2nd_peak[1], pars_sigm_2nd_peak[2]);
+  f_2nd_peak->SetParLimits(3, pars_bgr_2nd_peak[1], pars_bgr_2nd_peak[2]);
+  f_2nd_peak->SetParameters(pars_A_2nd_peak[0], pars_mean_2nd_peak[0], pars_sigm_2nd_peak[0], pars_bgr_2nd_peak[0]);
   
-  int n_for_average = 5;
-  double bgr_average;
-  for( int i = 0; i < n_for_average; i++ )
-    {
-      bgr_average = bgr_average + h_gr->GetBinContent(i) + h_gr->GetBinContent(N_hist_bins - i - 5);
-    }
-  bgr_average = bgr_average/double(2*n_for_average);
+  h_3rd_peak->SetAxisRange(range_3rd_peak[0], range_3rd_peak[1], "X");
+  f_3rd_peak->SetParLimits(0, pars_A_3rd_peak[1], pars_A_3rd_peak[2]);
+  f_3rd_peak->SetParLimits(1, pars_mean_3rd_peak[1], pars_mean_3rd_peak[2]);
+  f_3rd_peak->SetParLimits(2, pars_sigm_3rd_peak[1], pars_sigm_3rd_peak[2]);
+  f_3rd_peak->SetParLimits(3, pars_bgr_3rd_peak[1], pars_bgr_3rd_peak[2]);
+  f_3rd_peak->SetParameters(pars_A_3rd_peak[0], pars_mean_3rd_peak[0], pars_sigm_3rd_peak[0], pars_bgr_3rd_peak[0]);
   
-  TF1 *f_GPol0_[n_peaks];
+  int n_peaks = 3;
 
   cout<<"Npeaks = "<<n_peaks<<endl;
 
-  if( n_peaks == 2 )
+  if( n_peaks == 3 )
     {
+
       c1->Clear();
       c1->Divide(1, n_peaks);
-      TH1D *h_gr_tmp_[n_peaks];
-      
-      TGraph *gr_peaks = new TGraph(n_peaks, pos_tmp, peak_val_tmp);
-      gr_peaks->Sort();
-      double *pos = gr_peaks->GetX();
-      double *peak_val = gr_peaks->GetY();
-
-      string wire_names_[2] = {"x", "y"};
+       
+      string wire_names_[3] = {"45", "y", "x"};
       double mean_[n_peaks];
       double sigm_[n_peaks];
       double bgr_[n_peaks];
       double peak_val_[n_peaks];
       
-      for( int i = 0; i < n_peaks; i++ )
+      c1->cd(1)->SetLogy();
+
+      if( preview_mode )
 	{
-	  c1->cd(i+1)->SetLogy();
-	  h_gr_tmp_[i] = (TH1D*)h_gr->Clone(Form("h_gr_%d", i));
-	  f_GPol0_[i] = new TF1(Form("f_GPol0_%d", i), "[0]*TMath::Gaus(x, [1], [2]) + [3]");
-	  double mean_x = pos[i];
-	  h_gr_tmp_[i]->SetAxisRange(mean_x - 8., mean_x + 0.8);
-	  double tmp_RMS = h_gr_tmp_[i]->GetRMS();
-	  
-	  f_GPol0_[i]->SetRange(mean_x - 5., mean_x + 5.);
-	  f_GPol0_[i]->SetParLimits(3, 0., h_gr_tmp_[i]->GetMaximum());
-	  f_GPol0_[i]->SetParLimits(2, 0., 5.5);
-	  f_GPol0_[i]->SetParameters(peak_val[i] - bgr_average, pos[i], tmp_RMS, bgr_average);
-	  h_gr_tmp_[i]->SetAxisRange(mean_x - 3.5, mean_x + 3.5);
-	  //h_gr_tmp_[i]->Draw();
-	  h_gr_tmp_[i]->Fit(f_GPol0_[i], "+MeV", "", mean_x - 3., mean_x + 3.);
-	  
-	  mean_[i] = f_GPol0_[i]->GetParameter(1)/sqrt(2.);
-	  sigm_[i] = f_GPol0_[i]->GetParameter(2)/sqrt(2.);
-	  sigm_[i] = sigm_[i]/Arnes_Corr(sigm_[i], 0.025);
-	      
-	  bgr_[i] = f_GPol0_[i]->GetParameter(3);
-	  peak_val_[i] = f_GPol0_[i]->GetParameter(0);
-	  
-	  lat1->DrawLatex(0.05, 0.91, Form("Harp: 2c21   Counter: %s  Wire %s ", counter_name.c_str(), wire_names_[i].c_str()));
-	  lat1->DrawLatex(0.12, 0.85, Form("#mu = %1.4f mm", mean_[i]));
-	  lat1->DrawLatex(0.12, 0.80, Form("#sigma = %1.4f mm", sigm_[i]));
-	  lat1->DrawLatex(0.12, 0.75, Form("peak_val = %1.0f", peak_val[i]));
-	  lat1->DrawLatex(0.12, 0.70, Form("bgr/peak = %1.1e", bgr_[i]/peak_val[i]));
-	  cout<<"Bgr Average is "<<bgr_average<<endl;
-	  //f_GPol0_[i]->DrawCopy("Same");
-
-	  
-
-	  //  Usually data from this counter is better, data from this counter wil go into MYA
-// 	  if( counter_name == "Upstream_Left" )
-// 	    {
-// 	      system(Form("caput HB_BEAM:SCAN:2c21:mean_%s %1.5f", wire_names_[i].c_str(), mean_[i]));
-// 	      system(Form("caput HB_BEAM:SCAN:2c21:sigma_%s %1.5f", wire_names_[i].c_str(), sigm_[i]));
-// 	      system(Form("caput HB_BEAM:SCAN:2c21:bgr_peak_ratio_%s %1.7f", wire_names_[i].c_str(), bgr_[i]/peak_val[i]));
-// 	      system(Form("caput HB_BEAM:SCAN:2c21:peak_%s %1.5f", wire_names_[i].c_str(), peak_val[i]));
-// 	    }
+	  h_1st_peak->Draw();
+	  f_1st_peak->SetRange(range_1st_peak[0], range_1st_peak[1]);
+	  f_1st_peak->Draw("Same");
 	}
-      c1->Update();
+      else
+	{
+	  h_1st_peak->Fit(f_1st_peak, "+MeV", "", range_1st_peak[0], range_1st_peak[1]);
+	  
+	  mean_[0] = f_1st_peak->GetParameter(1);
+	  sigm_[0] = f_1st_peak->GetParameter(2);
+	  sigm_[0] = sigm_[0]/Arnes_Corr(sigm_[0], 0.025);
+	  
+	  bgr_[0] = f_1st_peak->GetParameter(3);
+	  peak_val_[0] = f_1st_peak->GetParameter(0);
+	  
+	  lat1->DrawLatex(0.15, 0.91, Form("Harp: tagger   Counter: %s  Wire %s ", counter_name.c_str(), wire_names_[0].c_str()));
+	  lat1->DrawLatex(0.12, 0.85, Form("#mu = %1.4f mm", mean_[0]));
+	  lat1->DrawLatex(0.12, 0.80, Form("#sigma = %1.4f mm", sigm_[0]));
+	  lat1->DrawLatex(0.12, 0.75, Form("peak_val = %1.0f", peak_val_[0]));
+	  lat1->DrawLatex(0.12, 0.70, Form("bgr/peak = %1.1e", bgr_[0]/peak_val_[0]));
+	}
+
+
+      c1->cd(2)->SetLogy();
+      
+      if( preview_mode )
+	{
+	  h_2nd_peak->Draw();
+	  f_2nd_peak->SetRange(range_2nd_peak[0], range_2nd_peak[1]);
+	  f_2nd_peak->Draw("Same");
+	}
+      else
+	{
+	  h_2nd_peak->Fit(f_2nd_peak, "+MeV", "", range_2nd_peak[0], range_2nd_peak[1]);
+	  
+	  mean_[1] = f_2nd_peak->GetParameter(1)/sqrt(2.);
+	  sigm_[1] = f_2nd_peak->GetParameter(2)/sqrt(2.);
+	  sigm_[1] = sigm_[1]/Arnes_Corr(sigm_[1], 0.025);
+	  
+	  bgr_[1] = f_2nd_peak->GetParameter(3);
+	  peak_val_[1] = f_2nd_peak->GetParameter(0);
+	  
+	  lat1->DrawLatex(0.15, 0.91, Form("Harp: tagger   Counter: %s  Wire %s ", counter_name.c_str(), wire_names_[1].c_str()));
+	  lat1->DrawLatex(0.12, 0.85, Form("#mu = %1.4f mm", mean_[1]));
+	  lat1->DrawLatex(0.12, 0.80, Form("#sigma = %1.4f mm", sigm_[1]));
+	  lat1->DrawLatex(0.12, 0.75, Form("peak_val = %1.0f", peak_val_[1]));
+	  lat1->DrawLatex(0.12, 0.70, Form("bgr/peak = %1.1e", bgr_[1]/peak_val_[1]));
+	}
+
+
+      c1->cd(3)->SetLogy();
+      
+      if( preview_mode )
+	{
+	  h_3rd_peak->Draw();
+	  f_3rd_peak->SetRange(range_3rd_peak[0], range_3rd_peak[1]);
+	  f_3rd_peak->Draw("Same");
+	}
+      else
+	{
+	  h_3rd_peak->Fit(f_3rd_peak, "+MeV", "", range_3rd_peak[0], range_3rd_peak[1]);
+	  
+	  mean_[1] = f_3rd_peak->GetParameter(1)/sqrt(2.);
+	  sigm_[1] = f_3rd_peak->GetParameter(2)/sqrt(2.);
+	  sigm_[1] = sigm_[1]/Arnes_Corr(sigm_[1], 0.025);
+	  
+	  bgr_[1] = f_3rd_peak->GetParameter(3);
+	  peak_val_[1] = f_3rd_peak->GetParameter(0);
+	  
+	  lat1->DrawLatex(0.15, 0.91, Form("Harp: tagger   Counter: %s  Wire %s ", counter_name.c_str(), wire_names_[1].c_str()));
+	  lat1->DrawLatex(0.12, 0.85, Form("#mu = %1.4f mm", mean_[1]));
+	  lat1->DrawLatex(0.12, 0.80, Form("#sigma = %1.4f mm", sigm_[1]));
+	  lat1->DrawLatex(0.12, 0.75, Form("peak_val = %1.0f", peak_val_[1]));
+	  lat1->DrawLatex(0.12, 0.70, Form("bgr/peak = %1.1e", bgr_[1]/peak_val_[1]));
+	}
+
+      double *alpha_a_b = Calc_abalpha(sigm_[0], sigm_[2]*TMath::Sqrt(2.), sigm_[1]*TMath::Sqrt(2.));
+      
+      double alpha = alpha_a_b[0];
+      double aa = alpha_a_b[1]/TMath::Sqrt(2.);
+      double bb = alpha_a_b[2]/TMath::Sqrt(2.);
+
       c1->cd(1);
-      lat1->SetTextSize(0.03);
-      //lat1->DrawLatex(0.02, 0.97, Form("%s/%s", all_harp_dir.c_str(), glob_filename.c_str()));
+      lat1->DrawLatex(0.7, 0.85, Form("#alpha = %1.2f deg", alpha));
+      lat1->DrawLatex(0.7, 0.8, Form("a = %1.2f", aa));
+      lat1->DrawLatex(0.7, 0.75, Form("b = %1.2f", bb));
+      lat1->SetTextSize(0.04);
+      lat1->DrawLatex(0.1, 0.97, Form("%s", file_name.c_str()));
+      
+      c1->cd();
+      c1->Update();
+
+//       if( counter_name == "tagger_right" )
+// 	{
+// 	  system(Form("caput HB_BEAM:SCAN:tagger:alpha %1.5f", alpha));
+// 	  system(Form("caput HB_BEAM:SCAN:tagger:a %1.5f", aa));
+// 	  system(Form("caput HB_BEAM:SCAN:tagger:b %1.7f", bb));
+// 	}
 
       // ============= Now Let's Save the file for the Log Entry ===============
       
+      return true;
+    }
+  
+}
 
-//       if( counter_name == "Upstream_Left" )
+bool Fitter::Fit_2H02A(TGraph *gr, string counter_name)
+{
+  TLatex *lat1 = new TLatex();
+  lat1->SetNDC();
+  
+  TCanvas *c1 = fEcanvas->GetCanvas();
+  c1->Clear();
+
+  h_1st_peak = (TH1D*)Graph2Hist(gr, 10.); // 10 is because 2H02A has motor position in cm, it should be converted into mm
+  h_1st_peak->SetTitle("; motor pos (mm)");
+  h_1st_peak->Sumw2();
+
+  h_2nd_peak = (TH1D*)h_1st_peak->Clone("h_2nd_peak");
+  h_3rd_peak = (TH1D*)h_1st_peak->Clone("h_3nd_peak");
+    
+  h_1st_peak->SetAxisRange(range_1st_peak[0], range_1st_peak[1], "X");
+  f_1st_peak->SetParLimits(0, pars_A_1st_peak[1], pars_A_1st_peak[2]);
+  f_1st_peak->SetParLimits(1, pars_mean_1st_peak[1], pars_mean_1st_peak[2]);
+  f_1st_peak->SetParLimits(2, pars_sigm_1st_peak[1], pars_sigm_1st_peak[2]);
+  f_1st_peak->SetParLimits(3, pars_bgr_1st_peak[1], pars_bgr_1st_peak[2]);
+  f_1st_peak->SetParameters(pars_A_1st_peak[0], pars_mean_1st_peak[0], pars_sigm_1st_peak[0], pars_bgr_1st_peak[0]);
+  
+  h_2nd_peak->SetAxisRange(range_2nd_peak[0], range_2nd_peak[1], "X");
+  f_2nd_peak->SetParLimits(0, pars_A_2nd_peak[1], pars_A_2nd_peak[2]);
+  f_2nd_peak->SetParLimits(1, pars_mean_2nd_peak[1], pars_mean_2nd_peak[2]);
+  f_2nd_peak->SetParLimits(2, pars_sigm_2nd_peak[1], pars_sigm_2nd_peak[2]);
+  f_2nd_peak->SetParLimits(3, pars_bgr_2nd_peak[1], pars_bgr_2nd_peak[2]);
+  f_2nd_peak->SetParameters(pars_A_2nd_peak[0], pars_mean_2nd_peak[0], pars_sigm_2nd_peak[0], pars_bgr_2nd_peak[0]);
+  
+  h_3rd_peak->SetAxisRange(range_3rd_peak[0], range_3rd_peak[1], "X");
+  f_3rd_peak->SetParLimits(0, pars_A_3rd_peak[1], pars_A_3rd_peak[2]);
+  f_3rd_peak->SetParLimits(1, pars_mean_3rd_peak[1], pars_mean_3rd_peak[2]);
+  f_3rd_peak->SetParLimits(2, pars_sigm_3rd_peak[1], pars_sigm_3rd_peak[2]);
+  f_3rd_peak->SetParLimits(3, pars_bgr_3rd_peak[1], pars_bgr_3rd_peak[2]);
+  f_3rd_peak->SetParameters(pars_A_3rd_peak[0], pars_mean_3rd_peak[0], pars_sigm_3rd_peak[0], pars_bgr_3rd_peak[0]);
+  
+  int n_peaks = 3;
+
+  cout<<"Npeaks = "<<n_peaks<<endl;
+
+  if( n_peaks == 3 )
+    {
+
+      c1->Clear();
+      c1->Divide(1, n_peaks);
+       
+      string wire_names_[3] = {"x", "y", "45"};
+      double mean_[n_peaks];
+      double sigm_[n_peaks];
+      double bgr_[n_peaks];
+      double peak_val_[n_peaks];
+      
+      c1->cd(1)->SetLogy();
+
+      if( preview_mode )
+	{
+	  h_1st_peak->Draw();
+	  f_1st_peak->SetRange(range_1st_peak[0], range_1st_peak[1]);
+	  f_1st_peak->Draw("Same");
+	}
+      else
+	{
+	  h_1st_peak->Fit(f_1st_peak, "+MeV", "", range_1st_peak[0], range_1st_peak[1]);
+	  
+	  mean_[0] = f_1st_peak->GetParameter(1)/sqrt(2.);
+	  sigm_[0] = f_1st_peak->GetParameter(2)/sqrt(2.);
+	  sigm_[0] = sigm_[0]/Arnes_Corr(sigm_[0], 0.025);
+	  
+	  bgr_[0] = f_1st_peak->GetParameter(3);
+	  peak_val_[0] = f_1st_peak->GetParameter(0);
+	  
+	  lat1->DrawLatex(0.15, 0.91, Form("Harp: 2H02A   Counter: %s  Wire %s ", counter_name.c_str(), wire_names_[0].c_str()));
+	  lat1->DrawLatex(0.12, 0.85, Form("#mu = %1.4f mm", mean_[0]));
+	  lat1->DrawLatex(0.12, 0.80, Form("#sigma = %1.4f mm", sigm_[0]));
+	  lat1->DrawLatex(0.12, 0.75, Form("peak_val = %1.0f", peak_val_[0]));
+	  lat1->DrawLatex(0.12, 0.70, Form("bgr/peak = %1.1e", bgr_[0]/peak_val_[0]));
+	}
+
+
+      c1->cd(2)->SetLogy();
+      
+      if( preview_mode )
+	{
+	  h_2nd_peak->Draw();
+	  f_2nd_peak->SetRange(range_2nd_peak[0], range_2nd_peak[1]);
+	  f_2nd_peak->Draw("Same");
+	}
+      else
+	{
+	  h_2nd_peak->Fit(f_2nd_peak, "+MeV", "", range_2nd_peak[0], range_2nd_peak[1]);
+	  
+	  mean_[1] = f_2nd_peak->GetParameter(1)/sqrt(2.);
+	  sigm_[1] = f_2nd_peak->GetParameter(2)/sqrt(2.);
+	  sigm_[1] = sigm_[1]/Arnes_Corr(sigm_[1], 0.025);
+	  
+	  bgr_[1] = f_2nd_peak->GetParameter(3);
+	  peak_val_[1] = f_2nd_peak->GetParameter(0);
+	  
+	  lat1->DrawLatex(0.15, 0.91, Form("Harp: 2H02A   Counter: %s  Wire %s ", counter_name.c_str(), wire_names_[1].c_str()));
+	  lat1->DrawLatex(0.12, 0.85, Form("#mu = %1.4f mm", mean_[1]));
+	  lat1->DrawLatex(0.12, 0.80, Form("#sigma = %1.4f mm", sigm_[1]));
+	  lat1->DrawLatex(0.12, 0.75, Form("peak_val = %1.0f", peak_val_[1]));
+	  lat1->DrawLatex(0.12, 0.70, Form("bgr/peak = %1.1e", bgr_[1]/peak_val_[1]));
+	}
+
+
+      c1->cd(3)->SetLogy();
+      
+      if( preview_mode )
+	{
+	  h_3rd_peak->Draw();
+	  f_3rd_peak->SetRange(range_3rd_peak[0], range_3rd_peak[1]);
+	  f_3rd_peak->Draw("Same");
+	}
+      else
+	{
+	  h_3rd_peak->Fit(f_3rd_peak, "+MeV", "", range_3rd_peak[0], range_3rd_peak[1]);
+	  
+	  mean_[1] = f_3rd_peak->GetParameter(1);
+	  sigm_[1] = f_3rd_peak->GetParameter(2);
+	  sigm_[1] = sigm_[1]/Arnes_Corr(sigm_[1], 0.025);
+	  
+	  bgr_[1] = f_3rd_peak->GetParameter(3);
+	  peak_val_[1] = f_3rd_peak->GetParameter(0);
+	  
+	  lat1->DrawLatex(0.15, 0.91, Form("Harp: 2H02A   Counter: %s  Wire %s ", counter_name.c_str(), wire_names_[1].c_str()));
+	  lat1->DrawLatex(0.12, 0.85, Form("#mu = %1.4f mm", mean_[1]));
+	  lat1->DrawLatex(0.12, 0.80, Form("#sigma = %1.4f mm", sigm_[1]));
+	  lat1->DrawLatex(0.12, 0.75, Form("peak_val = %1.0f", peak_val_[1]));
+	  lat1->DrawLatex(0.12, 0.70, Form("bgr/peak = %1.1e", bgr_[1]/peak_val_[1]));
+	}
+
+      double *alpha_a_b = Calc_abalpha(sigm_[2], sigm_[0]*TMath::Sqrt(2.), sigm_[1]*TMath::Sqrt(2.));
+      
+      double alpha = alpha_a_b[0];
+      double aa = alpha_a_b[1]/TMath::Sqrt(2.);
+      double bb = alpha_a_b[2]/TMath::Sqrt(2.);
+
+      c1->cd(1);
+      lat1->DrawLatex(0.7, 0.85, Form("#alpha = %1.2f deg", alpha));
+      lat1->DrawLatex(0.7, 0.8, Form("a = %1.2f", aa));
+      lat1->DrawLatex(0.7, 0.75, Form("b = %1.2f", bb));
+      lat1->SetTextSize(0.04);
+      lat1->DrawLatex(0.1, 0.97, Form("%s", file_name.c_str()));
+      
+      c1->cd();
+      c1->Update();
+
+//       if( counter_name == "tagger_right" )
 // 	{
-// 	  glob_filename.erase(1, 12);
-// 	  string img_path = Form("/home/hpsrun/screenshots/Scan_of_2c21_%s_%s.gif", counter_name.c_str(), glob_filename.c_str());
-// 	  c1->Print(Form("%s", img_path.c_str()));
-
-// 	  system(Form("/site/ace/certified/apps/bin/logentry -l HBLOG -t \" Scan of Harp 2C21 \" -a %s ", img_path.c_str()));
+// 	  system(Form("caput HB_BEAM:SCAN:tagger:alpha %1.5f", alpha));
+// 	  system(Form("caput HB_BEAM:SCAN:tagger:a %1.5f", aa));
+// 	  system(Form("caput HB_BEAM:SCAN:tagger:b %1.7f", bb));
 // 	}
+
+      // ============= Now Let's Save the file for the Log Entry ===============
       
       return true;
     }
-  else
-    {
-      h_gr->Draw();
-      lat1->DrawLatex(0.15, 0.91, Form("Harp: 2c21    counter %s", counter_name.c_str()));
-      c1->Update();
-      return false;
-    }
-
+  
 }
-*/
 
-TH1D *Graph2Hist(TGraph * gr, double scale)
+TH1D* Fitter::Graph2Hist(TGraph * gr, double scale)
 {
   gr->Sort();
   int n_points = gr->GetN();
@@ -981,19 +1312,22 @@ TH1D *Graph2Hist(TGraph * gr, double scale)
   for( int i = 1; i < n_points; i++ )
     {
       //cout<<"     ================= Hop ============== x is decreasing ====== i = "<<i<<"    x = "<<x_axis_tmp[i]<<endl;
-//       if( x_axis_tmp[i] <= x_axis_tmp[i - 1] )
-// 	{
-// 	  gr->RemovePoint(i);
-// 	}
+       if( x_axis_tmp[i] == x_axis_tmp[i - 1] )
+ 	{
+ 	  gr->RemovePoint(i);
+ 	}
     }
 
   n_points = gr->GetN();
   double *x_axis = gr->GetX();
   double *y_axis = gr->GetY();
+  double x_axis2[n_points];
+  double y_axis2[n_points];
 
   for( int i = 0; i < n_points; i++ )
     {
-      x_axis[i] = scale*x_axis[i];
+      x_axis2[i] = scale*x_axis[i];
+      y_axis2[i] = y_axis[i];
     }
 
   double x_varbins_[n_points + 1];
@@ -1002,7 +1336,7 @@ TH1D *Graph2Hist(TGraph * gr, double scale)
   cout<<"n_points after rearrangement "<<n_points<<endl;
   for( int i = 1; i < n_points; i++ )
     {
-      x_varbins_[i] = (x_axis[i-1] + x_axis[i])/2.;
+      x_varbins_[i] = (x_axis2[i-1] + x_axis2[i])/2.;
       //cout<<"x_varbins ["<<i<<"] = "<<x_varbins_[i]<<endl;
       
       if( x_varbins_[i] <= x_varbins_[i - 1] )
@@ -1011,8 +1345,8 @@ TH1D *Graph2Hist(TGraph * gr, double scale)
 	}
     }
 
-  x_varbins_[0] = (x_axis[0] - (x_axis[1] - x_axis[0])/2.);
-  x_varbins_[n_points] = (x_axis[n_points - 1] + (x_axis[n_points - 1] - x_axis[n_points - 2])/2.);
+  x_varbins_[0] = (x_axis2[0] - (x_axis2[1] - x_axis2[0])/2.);
+  x_varbins_[n_points] = (x_axis2[n_points - 1] + (x_axis2[n_points - 1] - x_axis2[n_points - 2])/2.);
   
   cout<<"x_varbins ["<<0<<"] = "<<x_varbins_[0]<<endl;
   cout<<"x_varbins ["<<n_points<<"] = "<<x_varbins_[n_points]<<endl;
@@ -1023,16 +1357,74 @@ TH1D *Graph2Hist(TGraph * gr, double scale)
 
   gr->GetPoint(0, x_low, y_low);
   gr->GetPoint(n_points - 1, x_high, y_high);
-  TH1D *h_gr = new TH1D("h_gr", "", n_points , x_varbins_ );
+
+  delete h_gr_tmp;
+  h_gr_tmp = new TH1D("h_gr", "", n_points , x_varbins_ );
+  //TH1D *h_gr = new TH1D("h_gr", "", n_points , x_varbins_ );
 
   //cout<<"xlow is "<<x_low<<"    x_high is "<<x_high<<endl;
 
-  h_gr->FillN(n_points, x_axis, y_axis);
-  h_gr->SetStats(0);
-  cout<<"NbinsX = "<<h_gr->GetNbinsX()<<endl;
+  h_gr_tmp->FillN(n_points, x_axis2, y_axis);
+  h_gr_tmp->SetStats(0);
+  cout<<"NbinsX = "<<h_gr_tmp->GetNbinsX()<<endl;
   
-  return h_gr;
+  return h_gr_tmp;
 }
+
+double* Calc_abalpha(double sigm45, double sigm_x, double sigm_y)
+{
+  const double radian = 57.2957795130823229;
+  const double PI = 3.14159265358979312;
+  double A = sigm_x*sigm_x;
+  double B = sigm_y*sigm_y;
+  double C = sigm45*sigm45;
+
+  double alpha = 0.5*atan((2*C-A-B)/(B-A));
+  if( A < B )
+    {
+      alpha = alpha + PI;
+    }
+  double a;
+  double b;
+  
+  if( 0.5*(A+B+(A-B)/cos(2*alpha))<0 )
+    {
+      b = -1.;
+    }
+  else
+    {
+      b = sqrt(0.5*( A+B-(A-B)/cos(2*alpha)));
+    }
+
+  if( 0.5*(A+B+(A-B)/cos(2*alpha))<0 )
+    {
+      a = -1.;
+    }
+  else
+    {
+      a = sqrt(0.5*(A+B+(A-B)/cos(2*alpha)));
+    }
+  
+  if( a < b )
+    {
+      if( alpha > 0 ) {alpha = alpha - PI/2.;}
+      else {alpha = alpha + PI/2.;}
+
+      double tmp = a;
+      a = b;
+      b = tmp;
+    }
+  
+  alpha = alpha*radian;
+  double alpha_a_b[3];
+  alpha_a_b[0] = alpha;
+  alpha_a_b[1] = a;
+  alpha_a_b[2] = b;
+  double *ret_values = alpha_a_b;
+  
+  return ret_values;
+ }
+
 
 double Arnes_Corr(double sigm, double wd)
 {
