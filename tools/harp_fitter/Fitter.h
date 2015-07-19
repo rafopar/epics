@@ -53,6 +53,8 @@ private:
   TF1 *f_1st_peak, *f_2nd_peak, *f_3rd_peak;
   TH1D *h_1st_peak, *h_2nd_peak, *h_3rd_peak;
 
+  double aa, bb, alpha;
+
   TH1D *h_gr_tmp; // This will be used in the Graph2Hist method, 
   // When a hist will be created it will be assigned to h_gr_tmp;
 
@@ -77,4 +79,5 @@ public:
   void Set_Fit_Pars();
   TH1D *Graph2Hist(TGraph *, double );
   void Load_Fit_Pars();
+  void CAPUT();
 };

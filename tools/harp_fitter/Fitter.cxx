@@ -97,6 +97,10 @@ Fitter::Fitter(const TGWindow *p,UInt_t w,UInt_t h, string fname)
   fit_pars->Connect("Clicked()", "Fitter", this, "Set_Fit_Pars()");
   vframe->AddFrame(fit_pars, new TGLayoutHints(kLHintsCenterX,1,1,1,1));
   
+  TGTextButton *b_to_MYA = new TGTextButton(vframe, "&Send parameters to MYA");
+  b_to_MYA->Connect("Clicked()", "Fitter", this, "CAPUT()");
+  vframe->AddFrame(b_to_MYA, new TGLayoutHints(kLHintsCenterX,1,1,1,1));
+
   TGTextButton *exit = new TGTextButton(vframe,"&Exit", "gApplication->Terminate(0)"); 
   vframe->AddFrame(exit, new TGLayoutHints(kLHintsCenterX,1,1,1,1));
 
@@ -195,8 +199,11 @@ void Fitter::OpenFile()
   // File should be already choosen here...
   //cout<<"After choosing a file, the file_name is "<<file_info.fFilename<<endl;
   //cout<<"ComboBox Selected index is "<<counters_box->GetSelected()<<endl;
-
-  InitData( file_info.fFilename );
+  
+  if( file_info.fFilename )
+    {
+      InitData( file_info.fFilename );
+    }
 }
 
 void Fitter::FitData( bool manual_fit, bool preview )
@@ -717,7 +724,7 @@ bool Fitter::Search_2c21_peaks(TGraph *gr)
       TH1D *h_gr_tmp = (TH1D*)h_gr->Clone("h_gr_tmp");
 
       double mean_x = pos[0];
-      h_gr_tmp->SetAxisRange(mean_x - 8., mean_x + 0.8);
+      h_gr_tmp->SetAxisRange(mean_x - 0.8, mean_x + 0.8);
       double tmp_RMS = h_gr_tmp->GetRMS();
       double tmp_Ampl = h_gr_tmp->GetMaximum() - bgr_average;
       
@@ -728,7 +735,7 @@ bool Fitter::Search_2c21_peaks(TGraph *gr)
       range_1st_peak[0] = mean_x - 3.5; range_1st_peak[1] = mean_x + 3.5;
 
       mean_x = pos[1];
-      h_gr_tmp->SetAxisRange(mean_x - 8., mean_x + 0.8);
+      h_gr_tmp->SetAxisRange(mean_x - 0.8, mean_x + 0.8);
       tmp_RMS = h_gr_tmp->GetRMS();
       tmp_Ampl = h_gr_tmp->GetMaximum() - bgr_average;
       
@@ -817,7 +824,7 @@ bool Fitter::Search_three_peaks(TGraph *gr)
       TH1D *h_gr_tmp = (TH1D*)h_gr->Clone("h_gr_tmp");
 
       double mean_x = pos[0];
-      h_gr_tmp->SetAxisRange(mean_x - 8., mean_x + 0.8);
+      h_gr_tmp->SetAxisRange(mean_x - 0.8, mean_x + 0.8);
       double tmp_RMS = h_gr_tmp->GetRMS();
       double tmp_Ampl = h_gr_tmp->GetMaximum() - bgr_average;
       
@@ -828,7 +835,7 @@ bool Fitter::Search_three_peaks(TGraph *gr)
       range_1st_peak[0] = mean_x - 3.5; range_1st_peak[1] = mean_x + 3.5;
 
       mean_x = pos[1];
-      h_gr_tmp->SetAxisRange(mean_x - 8., mean_x + 0.8);
+      h_gr_tmp->SetAxisRange(mean_x - 0.8, mean_x + 0.8);
       tmp_RMS = h_gr_tmp->GetRMS();
       tmp_Ampl = h_gr_tmp->GetMaximum() - bgr_average;
       
@@ -839,7 +846,7 @@ bool Fitter::Search_three_peaks(TGraph *gr)
       range_2nd_peak[0] = mean_x - 3.5; range_2nd_peak[1] = mean_x + 3.5;
 
       mean_x = pos[2];
-      h_gr_tmp->SetAxisRange(mean_x - 8., mean_x + 0.8);
+      h_gr_tmp->SetAxisRange(mean_x - 0.8, mean_x + 0.8);
       tmp_RMS = h_gr_tmp->GetRMS();
       tmp_Ampl = h_gr_tmp->GetMaximum() - bgr_average;
       
@@ -1096,25 +1103,25 @@ bool Fitter::Fit_tagger(TGraph *gr, string counter_name)
 	{
 	  h_3rd_peak->Fit(f_3rd_peak, "+MeV", "", range_3rd_peak[0], range_3rd_peak[1]);
 	  
-	  mean_[1] = f_3rd_peak->GetParameter(1)/sqrt(2.);
-	  sigm_[1] = f_3rd_peak->GetParameter(2)/sqrt(2.);
-	  sigm_[1] = sigm_[1]/Arnes_Corr(sigm_[1], 0.025);
+	  mean_[2] = f_3rd_peak->GetParameter(1)/sqrt(2.);
+	  sigm_[2] = f_3rd_peak->GetParameter(2)/sqrt(2.);
+	  sigm_[2] = sigm_[2]/Arnes_Corr(sigm_[2], 0.025);
 	  
-	  bgr_[1] = f_3rd_peak->GetParameter(3);
-	  peak_val_[1] = f_3rd_peak->GetParameter(0);
+	  bgr_[2] = f_3rd_peak->GetParameter(3);
+	  peak_val_[2] = f_3rd_peak->GetParameter(0);
 	  
-	  lat1->DrawLatex(0.15, 0.91, Form("Harp: tagger   Counter: %s  Wire %s ", counter_name.c_str(), wire_names_[1].c_str()));
-	  lat1->DrawLatex(0.12, 0.85, Form("#mu = %1.4f mm", mean_[1]));
-	  lat1->DrawLatex(0.12, 0.80, Form("#sigma = %1.4f mm", sigm_[1]));
-	  lat1->DrawLatex(0.12, 0.75, Form("peak_val = %1.0f", peak_val_[1]));
-	  lat1->DrawLatex(0.12, 0.70, Form("bgr/peak = %1.1e", bgr_[1]/peak_val_[1]));
+	  lat1->DrawLatex(0.15, 0.91, Form("Harp: tagger   Counter: %s  Wire %s ", counter_name.c_str(), wire_names_[2].c_str()));
+	  lat1->DrawLatex(0.12, 0.85, Form("#mu = %1.4f mm", mean_[2]));
+	  lat1->DrawLatex(0.12, 0.80, Form("#sigma = %1.4f mm", sigm_[2]));
+	  lat1->DrawLatex(0.12, 0.75, Form("peak_val = %1.0f", peak_val_[2]));
+	  lat1->DrawLatex(0.12, 0.70, Form("bgr/peak = %1.1e", bgr_[2]/peak_val_[2]));
 	}
 
       double *alpha_a_b = Calc_abalpha(sigm_[0], sigm_[2]*TMath::Sqrt(2.), sigm_[1]*TMath::Sqrt(2.));
       
-      double alpha = alpha_a_b[0];
-      double aa = alpha_a_b[1]/TMath::Sqrt(2.);
-      double bb = alpha_a_b[2]/TMath::Sqrt(2.);
+      alpha = alpha_a_b[0];
+      aa = alpha_a_b[1]/TMath::Sqrt(2.);
+      bb = alpha_a_b[2]/TMath::Sqrt(2.);
 
       c1->cd(1);
       lat1->DrawLatex(0.7, 0.85, Form("#alpha = %1.2f deg", alpha));
@@ -1258,25 +1265,26 @@ bool Fitter::Fit_2H02A(TGraph *gr, string counter_name)
 	{
 	  h_3rd_peak->Fit(f_3rd_peak, "+MeV", "", range_3rd_peak[0], range_3rd_peak[1]);
 	  
-	  mean_[1] = f_3rd_peak->GetParameter(1);
-	  sigm_[1] = f_3rd_peak->GetParameter(2);
-	  sigm_[1] = sigm_[1]/Arnes_Corr(sigm_[1], 0.025);
+	  mean_[2] = f_3rd_peak->GetParameter(1);
+	  sigm_[2] = f_3rd_peak->GetParameter(2);
+	  sigm_[2] = sigm_[2]/Arnes_Corr(sigm_[2], 0.025);
 	  
-	  bgr_[1] = f_3rd_peak->GetParameter(3);
-	  peak_val_[1] = f_3rd_peak->GetParameter(0);
+	  bgr_[2] = f_3rd_peak->GetParameter(3);
+	  peak_val_[2] = f_3rd_peak->GetParameter(0);
 	  
-	  lat1->DrawLatex(0.15, 0.91, Form("Harp: 2H02A   Counter: %s  Wire %s ", counter_name.c_str(), wire_names_[1].c_str()));
-	  lat1->DrawLatex(0.12, 0.85, Form("#mu = %1.4f mm", mean_[1]));
-	  lat1->DrawLatex(0.12, 0.80, Form("#sigma = %1.4f mm", sigm_[1]));
-	  lat1->DrawLatex(0.12, 0.75, Form("peak_val = %1.0f", peak_val_[1]));
-	  lat1->DrawLatex(0.12, 0.70, Form("bgr/peak = %1.1e", bgr_[1]/peak_val_[1]));
+	  lat1->DrawLatex(0.15, 0.91, Form("Harp: 2H02A   Counter: %s  Wire %s ", counter_name.c_str(), wire_names_[2].c_str()));
+	  lat1->DrawLatex(0.12, 0.85, Form("#mu = %1.4f mm", mean_[2]));
+	  lat1->DrawLatex(0.12, 0.80, Form("#sigma = %1.4f mm", sigm_[2]));
+	  lat1->DrawLatex(0.12, 0.75, Form("peak_val = %1.0f", peak_val_[2]));
+	  lat1->DrawLatex(0.12, 0.70, Form("bgr/peak = %1.1e", bgr_[2]/peak_val_[2]));
 	}
+
 
       double *alpha_a_b = Calc_abalpha(sigm_[2], sigm_[0]*TMath::Sqrt(2.), sigm_[1]*TMath::Sqrt(2.));
       
-      double alpha = alpha_a_b[0];
-      double aa = alpha_a_b[1]/TMath::Sqrt(2.);
-      double bb = alpha_a_b[2]/TMath::Sqrt(2.);
+      alpha = alpha_a_b[0];
+      aa = alpha_a_b[1]/TMath::Sqrt(2.);
+      bb = alpha_a_b[2]/TMath::Sqrt(2.);
 
       c1->cd(1);
       lat1->DrawLatex(0.7, 0.85, Form("#alpha = %1.2f deg", alpha));
@@ -1369,6 +1377,85 @@ TH1D* Fitter::Graph2Hist(TGraph * gr, double scale)
   cout<<"NbinsX = "<<h_gr_tmp->GetNbinsX()<<endl;
   
   return h_gr_tmp;
+}
+
+void Fitter::CAPUT()
+{
+  if( fit_2c21 )
+    {
+      int n_wires = 2;
+      string wire_names_[2] = {"x", "y"};
+      double mean_[n_wires];
+      double sigm_[n_wires];
+      double bgr_[n_wires];
+      double peak_val_[n_wires];
+
+      mean_[0] = f_1st_peak->GetParameter(1)/TMath::Sqrt(2.); mean_[1] = f_2nd_peak->GetParameter(1)/TMath::Sqrt(2.);
+      sigm_[0] = f_1st_peak->GetParameter(2)/TMath::Sqrt(2.); sigm_[1] = f_2nd_peak->GetParameter(2)/TMath::Sqrt(2.);
+      bgr_[0] = f_1st_peak->GetParameter(3); bgr_[1] = f_2nd_peak->GetParameter(3);
+      peak_val_[0] = f_1st_peak->GetParameter(0); peak_val_[1] = f_2nd_peak->GetParameter(0);
+      
+      for( int i = 0; i < n_wires; i++ )
+	{
+	  system(Form("caput HB_BEAM:SCAN:2c21:mean_%s %1.5f", wire_names_[i].c_str(), mean_[i]));
+	  system(Form("caput HB_BEAM:SCAN:2c21:sigma_%s %1.5f", wire_names_[i].c_str(), sigm_[i]));
+	  system(Form("caput HB_BEAM:SCAN:2c21:bgr_peak_ratio_%s %1.7f", wire_names_[i].c_str(), bgr_[i]/peak_val_[i]));
+	  system(Form("caput HB_BEAM:SCAN:2c21:peak_%s %1.5f", wire_names_[i].c_str(), peak_val_[i]));
+	}
+    }
+  else if( fit_tagger )
+    {
+      int n_wires = 3;
+      string wire_names_[3] = {"45", "y", "x"};
+      double mean_[n_wires];
+      double sigm_[n_wires];
+      double bgr_[n_wires];
+      double peak_val_[n_wires];
+
+      mean_[0] = f_1st_peak->GetParameter(1); mean_[1] = f_2nd_peak->GetParameter(1)/TMath::Sqrt(2.); mean_[2] = f_3rd_peak->GetParameter(1)/TMath::Sqrt(2.);
+      sigm_[0] = f_1st_peak->GetParameter(2); sigm_[1] = f_2nd_peak->GetParameter(2)/TMath::Sqrt(2.); sigm_[2] = f_3rd_peak->GetParameter(2)/TMath::Sqrt(2.);
+      bgr_[0] = f_1st_peak->GetParameter(3); bgr_[1] = f_2nd_peak->GetParameter(3); bgr_[2] = f_3rd_peak->GetParameter(3); 
+      peak_val_[0] = f_1st_peak->GetParameter(0); peak_val_[1] = f_2nd_peak->GetParameter(0); peak_val_[2] = f_3rd_peak->GetParameter(0);
+
+      for( int i = 0; i < n_wires; i++ )
+	{
+	  system(Form("caput HB_BEAM:SCAN:tagger:mean_%s %1.5f", wire_names_[i].c_str(), mean_[i]));
+	  system(Form("caput HB_BEAM:SCAN:tagger:sigma_%s %1.5f", wire_names_[i].c_str(), sigm_[i]));
+	  system(Form("caput HB_BEAM:SCAN:tagger:bgr_peak_ratio_%s %1.7f", wire_names_[i].c_str(), bgr_[i]/peak_val_[i]));
+	  system(Form("caput HB_BEAM:SCAN:tagger:peak_%s %1.5f", wire_names_[i].c_str(), peak_val_[i]));
+	}
+      
+      system(Form("caput HB_BEAM:SCAN:tagger:alpha %1.5f", alpha));
+      system(Form("caput HB_BEAM:SCAN:tagger:a %1.5f", aa));
+      system(Form("caput HB_BEAM:SCAN:tagger:b %1.7f", bb));
+
+    }
+  else if( fit_2H02A )
+    {
+      int n_wires = 3;
+      string wire_names_[3] = {"x", "y", "45"};
+      double mean_[n_wires];
+      double sigm_[n_wires];
+      double bgr_[n_wires];
+      double peak_val_[n_wires];
+
+      mean_[0] = f_1st_peak->GetParameter(1)/TMath::Sqrt(2.); mean_[1] = f_2nd_peak->GetParameter(1)/TMath::Sqrt(2.); mean_[2] = f_3rd_peak->GetParameter(1);
+      sigm_[0] = f_1st_peak->GetParameter(2)/TMath::Sqrt(2.); sigm_[1] = f_2nd_peak->GetParameter(2)/TMath::Sqrt(2.); sigm_[2] = f_3rd_peak->GetParameter(2);
+      bgr_[0] = f_1st_peak->GetParameter(3); bgr_[1] = f_2nd_peak->GetParameter(3); bgr_[2] = f_3rd_peak->GetParameter(3); 
+      peak_val_[0] = f_1st_peak->GetParameter(0); peak_val_[1] = f_2nd_peak->GetParameter(0); peak_val_[2] = f_3rd_peak->GetParameter(0);
+
+      for( int i = 0; i < n_wires; i++ )
+	{
+	  system(Form("caput HB_BEAM:SCAN:2H02A:mean_%s %1.5f", wire_names_[i].c_str(), mean_[i]));
+	  system(Form("caput HB_BEAM:SCAN:2H02A:sigma_%s %1.5f", wire_names_[i].c_str(), sigm_[i]));
+	  system(Form("caput HB_BEAM:SCAN:2H02A:bgr_peak_ratio_%s %1.7f", wire_names_[i].c_str(), bgr_[i]/peak_val_[i]));
+	  system(Form("caput HB_BEAM:SCAN:2H02A:peak_%s %1.5f", wire_names_[i].c_str(), peak_val_[i]));
+	}
+	  system(Form("caput HB_BEAM:SCAN:2H02A:alpha %1.5f", alpha));
+	  system(Form("caput HB_BEAM:SCAN:2H02A:a %1.5f", aa));
+	  system(Form("caput HB_BEAM:SCAN:2H02A:b %1.7f", bb));
+    }
+
 }
 
 double* Calc_abalpha(double sigm45, double sigm_x, double sigm_y)
