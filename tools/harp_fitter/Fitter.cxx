@@ -19,6 +19,8 @@
 #include <TGFileDialog.h>
 #include <TGNumberEntry.h>
 #include <TGTextEdit.h>
+
+
 #include "Fitter.h" 
 
 using namespace std;
@@ -98,13 +100,13 @@ Fitter::Fitter(const TGWindow *p,UInt_t w,UInt_t h, string fname)
   to_log->Connect("Clicked()", "Fitter", this, "GetComments()");
   vframe->AddFrame(to_log, new TGLayoutHints(kLHintsCenterX,1,1,1,1));
 
-  TGTextButton *fit_pars = new TGTextButton(vframe, "Set Fit Initial Parameters");
+  TGTextButton *fit_pars = new TGTextButton(vframe, "Set Fit Ranges");
   fit_pars->Connect("Clicked()", "Fitter", this, "Set_Fit_Pars()");
   vframe->AddFrame(fit_pars, new TGLayoutHints(kLHintsCenterX,1,1,1,1));
   
-  TGTextButton *b_to_MYA = new TGTextButton(vframe, "&Send parameters to MYA");
-  b_to_MYA->Connect("Clicked()", "Fitter", this, "CAPUT()");
-  vframe->AddFrame(b_to_MYA, new TGLayoutHints(kLHintsCenterX,1,1,1,1));
+  //  TGTextButton *b_to_MYA = new TGTextButton(vframe, "&Send parameters to MYA");
+  //  b_to_MYA->Connect("Clicked()", "Fitter", this, "CAPUT()");
+  //vframe->AddFrame(b_to_MYA, new TGLayoutHints(kLHintsCenterX,1,1,1,1));
 
   TGTextButton *exit = new TGTextButton(vframe,"&Exit", "gApplication->Terminate(0)"); 
   vframe->AddFrame(exit, new TGLayoutHints(kLHintsCenterX,1,1,1,1));
@@ -141,16 +143,19 @@ void Fitter::InitData( string fname )
     {
       fit_2c21 = true;
       harp_name = "harp_2c21";
+      scale_Xaxis = 1.;
     }
   else if(file_name.find("tagger") > 2 && file_name.find("tagger") < 50)
     {
       fit_tagger = true;
       harp_name = "harp_tagger";
+      scale_Xaxis = 1.;
     }
   else if( file_name.find("2H02A") > 2 && file_name.find("2H02A") < 50)
     {
       fit_2H02A = true;
       harp_name = "harp_2H02A";
+      scale_Xaxis = 10.;
     }
   
   cout<<"fit_tagger = "<<fit_tagger<<endl;
@@ -230,6 +235,7 @@ void Fitter::OpenFile()
   //cout<<"After choosing a file, the file_name is "<<file_info.fFilename<<endl;
   //cout<<"ComboBox Selected index is "<<counters_box->GetSelected()<<endl;
   
+
   if( file_info.fFilename )
     {
       InitData( file_info.fFilename );
@@ -246,25 +252,82 @@ void Fitter::FitData( bool manual_fit, bool preview )
       bool good_parameters = true;
       if( manual_fit )
 	{
-	  pars_bgr_1st_peak[0] = First_peak_bgr->GetNumber(); pars_bgr_1st_peak[1] = First_peak_bgr_min->GetNumber(); pars_bgr_1st_peak[2] = First_peak_bgr_max->GetNumber();
-	  pars_A_1st_peak[0] = First_peak_A->GetNumber(); pars_A_1st_peak[1] = First_peak_A_min->GetNumber(); pars_A_1st_peak[2] = First_peak_A_max->GetNumber();
-	  pars_mean_1st_peak[0] = First_peak_mean->GetNumber(); pars_mean_1st_peak[1] = First_peak_mean_min->GetNumber(); pars_mean_1st_peak[2] = First_peak_mean_max->GetNumber();
-	  pars_sigm_1st_peak[0] = First_peak_sigm->GetNumber(); pars_sigm_1st_peak[1] = First_peak_sigm_min->GetNumber(); pars_sigm_1st_peak[2] = First_peak_sigm_max->GetNumber();
+	  
+//	  pars_bgr_1st_peak[0] = First_peak_bgr->GetNumber(); pars_bgr_1st_peak[1] = First_peak_bgr_min->GetNumber(); pars_bgr_1st_peak[2] = First_peak_bgr_max->GetNumber();
+// 	  pars_A_1st_peak[0] = First_peak_A->GetNumber(); pars_A_1st_peak[1] = First_peak_A_min->GetNumber(); pars_A_1st_peak[2] = First_peak_A_max->GetNumber();
+// 	  pars_mean_1st_peak[0] = First_peak_mean->GetNumber(); pars_mean_1st_peak[1] = First_peak_mean_min->GetNumber(); pars_mean_1st_peak[2] = First_peak_mean_max->GetNumber();
+// 	  pars_sigm_1st_peak[0] = First_peak_sigm->GetNumber(); pars_sigm_1st_peak[1] = First_peak_sigm_min->GetNumber(); pars_sigm_1st_peak[2] = First_peak_sigm_max->GetNumber();
 	  range_1st_peak[0] = First_peak_range_min->GetNumber(); range_1st_peak[1] = First_peak_range_max->GetNumber();
 	  
-	  pars_bgr_2nd_peak[0] = Second_peak_bgr->GetNumber(); pars_bgr_2nd_peak[1] = Second_peak_bgr_min->GetNumber(); pars_bgr_2nd_peak[2] = Second_peak_bgr_max->GetNumber();
-	  pars_A_2nd_peak[0] = Second_peak_A->GetNumber(); pars_A_2nd_peak[1] = Second_peak_A_min->GetNumber(); pars_A_2nd_peak[2] = Second_peak_A_max->GetNumber();
-	  pars_mean_2nd_peak[0] = Second_peak_mean->GetNumber(); pars_mean_2nd_peak[1] = Second_peak_mean_min->GetNumber(); pars_mean_2nd_peak[2] = Second_peak_mean_max->GetNumber();
-	  pars_sigm_2nd_peak[0] = Second_peak_sigm->GetNumber(); pars_sigm_2nd_peak[1] = Second_peak_sigm_min->GetNumber(); pars_sigm_2nd_peak[2] = Second_peak_sigm_max->GetNumber();
-	  range_2nd_peak[0] = Second_peak_range_min->GetNumber(); range_2nd_peak[1] = Second_peak_range_max->GetNumber();
+	  h_1st_peak = (TH1D*)Graph2Hist(gr_[counter_ind], scale_Xaxis);
+	  
+	  h_1st_peak->SetAxisRange(range_1st_peak[0], range_1st_peak[1]);
+	  int l_bin = h_1st_peak->FindBin(range_1st_peak[0]);
+	  int r_bin = h_1st_peak->FindBin(range_1st_peak[1]);
+	  double max_val = h_1st_peak->GetMaximum();
+	  pars_bgr_1st_peak[0] = (1/8)*(h_1st_peak->GetBinContent(l_bin) + h_1st_peak->GetBinContent(l_bin + 1) + h_1st_peak->GetBinContent(l_bin + 2) + 
+					h_1st_peak->GetBinContent(l_bin + 3) + h_1st_peak->GetBinContent(r_bin) + h_1st_peak->GetBinContent(r_bin - 1) + 
+					h_1st_peak->GetBinContent(r_bin - 2) + h_1st_peak->GetBinContent(r_bin - 3) );
+	  pars_bgr_1st_peak[1] = 0.; pars_bgr_1st_peak[2] = 5*pars_bgr_1st_peak[0];
+	  
+	  pars_A_1st_peak[0] = max_val - pars_bgr_1st_peak[0];
+	  pars_A_1st_peak[1] = 0.; pars_A_1st_peak[2] = 2*max_val;
 
+	  pars_mean_1st_peak[0] = h_1st_peak->GetBinCenter(h_1st_peak->GetMaximumBin());
+	  pars_mean_1st_peak[1] = range_1st_peak[0]; pars_mean_1st_peak[2] = range_1st_peak[1];
+
+	  pars_sigm_1st_peak[0] = h_1st_peak->GetRMS();
+	  pars_sigm_1st_peak[1] = 0.001*pars_sigm_1st_peak[0]; pars_sigm_1st_peak[2] = 10*pars_sigm_1st_peak[0];
+
+//	  pars_bgr_2nd_peak[0] = Second_peak_bgr->GetNumber(); pars_bgr_2nd_peak[1] = Second_peak_bgr_min->GetNumber(); pars_bgr_2nd_peak[2] = Second_peak_bgr_max->GetNumber();
+// 	  pars_A_2nd_peak[0] = Second_peak_A->GetNumber(); pars_A_2nd_peak[1] = Second_peak_A_min->GetNumber(); pars_A_2nd_peak[2] = Second_peak_A_max->GetNumber();
+// 	  pars_mean_2nd_peak[0] = Second_peak_mean->GetNumber(); pars_mean_2nd_peak[1] = Second_peak_mean_min->GetNumber(); pars_mean_2nd_peak[2] = Second_peak_mean_max->GetNumber();
+// 	  pars_sigm_2nd_peak[0] = Second_peak_sigm->GetNumber(); pars_sigm_2nd_peak[1] = Second_peak_sigm_min->GetNumber(); pars_sigm_2nd_peak[2] = Second_peak_sigm_max->GetNumber();
+ 	  range_2nd_peak[0] = Second_peak_range_min->GetNumber(); range_2nd_peak[1] = Second_peak_range_max->GetNumber();
+	  
+	  h_2nd_peak = (TH1D*)h_1st_peak->Clone("h_2nd_peak");
+	  h_2nd_peak->SetAxisRange(range_2nd_peak[0], range_2nd_peak[1]);
+	  l_bin = h_2nd_peak->FindBin(range_2nd_peak[0]);
+	  r_bin = h_2nd_peak->FindBin(range_2nd_peak[1]);
+	  max_val = h_2nd_peak->GetMaximum();
+	  pars_bgr_2nd_peak[0] = (1/8)*(h_2nd_peak->GetBinContent(l_bin) + h_2nd_peak->GetBinContent(l_bin + 1) + h_2nd_peak->GetBinContent(l_bin + 2) + 
+					h_2nd_peak->GetBinContent(l_bin + 3) + h_2nd_peak->GetBinContent(r_bin) + h_2nd_peak->GetBinContent(r_bin - 1) + 
+					h_2nd_peak->GetBinContent(r_bin - 2) + h_2nd_peak->GetBinContent(r_bin - 3) );
+	  pars_bgr_2nd_peak[1] = 0.; pars_bgr_2nd_peak[2] = 5*pars_bgr_2nd_peak[0];
+
+	  pars_A_2nd_peak[0] = max_val - pars_bgr_2nd_peak[0];
+	  pars_A_2nd_peak[1] = 0.; pars_A_2nd_peak[2] = 2*max_val;
+
+	  pars_mean_2nd_peak[0] = h_2nd_peak->GetBinCenter(h_2nd_peak->GetMaximumBin());
+	  pars_mean_2nd_peak[1] = range_2nd_peak[0]; pars_mean_2nd_peak[2] = range_2nd_peak[1];
+
+	  pars_sigm_2nd_peak[0] = h_2nd_peak->GetRMS();
+	  pars_sigm_2nd_peak[1] = 0.001*pars_sigm_2nd_peak[0]; pars_sigm_2nd_peak[2] = 10*pars_sigm_2nd_peak[0];
+	  
 	  if( fit_tagger || fit_2H02A )
 	    {
-	      pars_bgr_3rd_peak[0] = Third_peak_bgr->GetNumber(); pars_bgr_3rd_peak[1] = Third_peak_bgr_min->GetNumber(); pars_bgr_3rd_peak[2] = Third_peak_bgr_max->GetNumber();
-	      pars_A_3rd_peak[0] = Third_peak_A->GetNumber(); pars_A_3rd_peak[1] = Third_peak_A_min->GetNumber(); pars_A_3rd_peak[2] = Third_peak_A_max->GetNumber();
-	      pars_mean_3rd_peak[0] = Third_peak_mean->GetNumber(); pars_mean_3rd_peak[1] = Third_peak_mean_min->GetNumber(); pars_mean_3rd_peak[2] = Third_peak_mean_max->GetNumber();
-	      pars_sigm_3rd_peak[0] = Third_peak_sigm->GetNumber(); pars_sigm_3rd_peak[1] = Third_peak_sigm_min->GetNumber(); pars_sigm_3rd_peak[2] = Third_peak_sigm_max->GetNumber();
+// 	      pars_bgr_3rd_peak[0] = Third_peak_bgr->GetNumber(); pars_bgr_3rd_peak[1] = Third_peak_bgr_min->GetNumber(); pars_bgr_3rd_peak[2] = Third_peak_bgr_max->GetNumber();
+// 	      pars_A_3rd_peak[0] = Third_peak_A->GetNumber(); pars_A_3rd_peak[1] = Third_peak_A_min->GetNumber(); pars_A_3rd_peak[2] = Third_peak_A_max->GetNumber();
+// 	      pars_mean_3rd_peak[0] = Third_peak_mean->GetNumber(); pars_mean_3rd_peak[1] = Third_peak_mean_min->GetNumber(); pars_mean_3rd_peak[2] = Third_peak_mean_max->GetNumber();
+// 	      pars_sigm_3rd_peak[0] = Third_peak_sigm->GetNumber(); pars_sigm_3rd_peak[1] = Third_peak_sigm_min->GetNumber(); pars_sigm_3rd_peak[2] = Third_peak_sigm_max->GetNumber();
 	      range_3rd_peak[0] = Third_peak_range_min->GetNumber(); range_3rd_peak[1] = Third_peak_range_max->GetNumber();
+	      
+	      h_3rd_peak = (TH1D*)h_1st_peak->Clone("h_3rd_peak");
+	      h_3rd_peak->SetAxisRange(range_3rd_peak[0], range_3rd_peak[1]);
+	      l_bin = h_3rd_peak->FindBin(range_3rd_peak[0]);
+	      r_bin = h_3rd_peak->FindBin(range_3rd_peak[1]);
+	      max_val = h_3rd_peak->GetMaximum();
+	      pars_bgr_3rd_peak[0] = (1/8)*(h_3rd_peak->GetBinContent(l_bin) + h_3rd_peak->GetBinContent(l_bin + 1) + h_3rd_peak->GetBinContent(l_bin + 2) + 
+					    h_3rd_peak->GetBinContent(l_bin + 3) + h_3rd_peak->GetBinContent(r_bin) + h_3rd_peak->GetBinContent(r_bin - 1) + 
+					    h_3rd_peak->GetBinContent(r_bin - 2) + h_3rd_peak->GetBinContent(r_bin - 3) );
+	      pars_bgr_3rd_peak[1] = 0.; pars_bgr_3rd_peak[2] = 5*pars_bgr_3rd_peak[0];
+	      
+	      pars_A_3rd_peak[0] = max_val - pars_bgr_3rd_peak[0];
+	      pars_A_3rd_peak[1] = 0.; pars_A_3rd_peak[2] = 2*max_val;
+	      pars_mean_3rd_peak[0] = h_3rd_peak->GetBinCenter(h_3rd_peak->GetMaximumBin());
+	      pars_mean_3rd_peak[1] = range_3rd_peak[0]; pars_mean_3rd_peak[2] = range_3rd_peak[1];
+	      pars_sigm_3rd_peak[0] = h_3rd_peak->GetRMS();
+	      pars_sigm_3rd_peak[1] = 0.001*pars_sigm_3rd_peak[0]; pars_sigm_3rd_peak[2] = 10*pars_sigm_3rd_peak[0];
 	    }
 	}
       else
@@ -341,6 +404,12 @@ void Fitter::SubmitToLogbook()
   
   c1->Print(Form("%s", dump_img_name.c_str()));
   
+  if( but_to_MYA->IsOn() )
+    {
+      cout<<"Send to MYA is selected"<<endl;
+      CAPUT();
+    }
+
   system(Form("/site/ace/certified/apps/bin/logentry -l TLOG -t \" Scan of %s \" -a %s -b \"/usr/tmp/Log_comments.txt\" ",
 	      harp_name.c_str(), dump_img_name.c_str()));
   fMain_log->CloseWindow();
@@ -354,9 +423,17 @@ void Fitter::GetComments()
   comments->SetText(new TGText("Comments"));
   fMain_log->AddFrame(comments, new TGLayoutHints(kLHintsExpandX| kLHintsExpandY, 2,2,2,2) );
 
-  TGTextButton *submit = new TGTextButton(fMain_log, "&Submit");
+  TGHorizontalFrame *hor_frame1 = new TGHorizontalFrame(fMain_log, 400, 2, kHorizontalFrame);
+
+  TGTextButton *submit = new TGTextButton(hor_frame1, "&Submit");
   submit->Connect("Clicked()", "Fitter", this, "SubmitToLogbook()");
-  fMain_log->AddFrame(submit, new TGLayoutHints(kLHintsBottom,2,2,2,2));
+  hor_frame1->AddFrame(submit, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
+
+  //  TGSelectBox *box_to_MYA = new TGSelectBox(hor_frame1, fMain);
+  but_to_MYA = new TGCheckButton(hor_frame1, "Send to MYA");
+  hor_frame1->AddFrame(but_to_MYA, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
+
+  fMain_log->AddFrame(hor_frame1, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
 
   fMain_log->SetWindowName("Sumit to Logbook"); 
   // Map all subwindows of main frame 
@@ -373,7 +450,7 @@ void Fitter::Set_Fit_Pars()
  
   f_Main_FitPars->SetCleanup(kDeepCleanup); // Without this line it crashes, when one close the 
   //"Set Initial Fit Parameters" window, when the coursor is blinking in one of the numeric fields
-  
+  /*
   TGCompositeFrame *f_1st_peak_bgr = new TGCompositeFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
 
   TGLabel *lbl_1st_peak_bgr = new TGLabel(f_1st_peak_bgr, "1st peak, bgr:             value");
@@ -446,7 +523,7 @@ void Fitter::Set_Fit_Pars()
   f_1st_peak_sigm->AddFrame(lbl_1st_peak_sigm_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
   First_peak_sigm_max = new TGNumberEntry(f_1st_peak_sigm, 1., 10);
   f_1st_peak_sigm->AddFrame(First_peak_sigm_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-
+*/
   //  TGHorizontalFrame *f_buttons =            new TGHorizontalFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
   TGHorizontalFrame *f_1st_peak_Fit_Range = new TGHorizontalFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
   TGLabel *lbl_1st_peak_Fit_Range_min = new TGLabel(f_1st_peak_Fit_Range, "1st Peak Fit Range:        min");
@@ -459,7 +536,7 @@ void Fitter::Set_Fit_Pars()
   First_peak_range_max = new TGNumberEntry(f_1st_peak_Fit_Range, 25., 10);
   f_1st_peak_Fit_Range->AddFrame(First_peak_range_max,  new TGLayoutHints(kLHintsCenterX,2,2,2,2));
   
-
+  /*
   TGCompositeFrame *f_2nd_peak_bgr = new TGCompositeFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
 
   TGLabel *lbl_2nd_peak_bgr = new TGLabel(f_2nd_peak_bgr, "2nd peak, bgr:            value");
@@ -530,8 +607,9 @@ void Fitter::Set_Fit_Pars()
   f_2nd_peak_sigm->AddFrame(lbl_2nd_peak_sigm_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
   Second_peak_sigm_max = new TGNumberEntry(f_2nd_peak_sigm, 1., 10);
   f_2nd_peak_sigm->AddFrame(Second_peak_sigm_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
+*/
 
-
+  
   TGHorizontalFrame *f_2nd_peak_Fit_Range = new TGHorizontalFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
   TGLabel *lbl_2nd_peak_Fit_Range_min = new TGLabel(f_2nd_peak_Fit_Range, "2nd Peak Fit Range:        min");
   f_2nd_peak_Fit_Range->AddFrame(lbl_2nd_peak_Fit_Range_min);
@@ -543,7 +621,7 @@ void Fitter::Set_Fit_Pars()
   Second_peak_range_max = new TGNumberEntry(f_2nd_peak_Fit_Range, 45., 10);
   f_2nd_peak_Fit_Range->AddFrame(Second_peak_range_max,  new TGLayoutHints(kLHintsCenterX,2,2,2,2));
 
-
+  /*
   TGCompositeFrame *f_3rd_peak_bgr = new TGCompositeFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
 
   TGLabel *lbl_3rd_peak_bgr = new TGLabel(f_3rd_peak_bgr, "3rd peak, bgr:            value");
@@ -614,6 +692,7 @@ void Fitter::Set_Fit_Pars()
   f_3rd_peak_sigm->AddFrame(lbl_3rd_peak_sigm_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
   Third_peak_sigm_max = new TGNumberEntry(f_3rd_peak_sigm, 1., 10);
   f_3rd_peak_sigm->AddFrame(Third_peak_sigm_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
+  */
 
   TGHorizontalFrame *f_3rd_peak_Fit_Range = new TGHorizontalFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
   TGLabel *lbl_3rd_peak_Fit_Range_min = new TGLabel(f_3rd_peak_Fit_Range, "3rd Peak Fit Range:        min");
@@ -627,40 +706,42 @@ void Fitter::Set_Fit_Pars()
   f_3rd_peak_Fit_Range->AddFrame(Third_peak_range_max,  new TGLayoutHints(kLHintsCenterX,2,2,2,2));
 
 
-  f_Main_FitPars->AddFrame(f_1st_peak_bgr, new TGLayoutHints(kLHintsTop,2,2,2,2));
-  f_Main_FitPars->AddFrame(f_1st_peak_A, new TGLayoutHints(kLHintsTop,2,2,2,2));
-  f_Main_FitPars->AddFrame(f_1st_peak_mean, new TGLayoutHints(kLHintsTop,2,2,2,2));
-  f_Main_FitPars->AddFrame(f_1st_peak_sigm, new TGLayoutHints(kLHintsTop,2,2,2,2));
+//   f_Main_FitPars->AddFrame(f_1st_peak_bgr, new TGLayoutHints(kLHintsTop,2,2,2,2));
+//   f_Main_FitPars->AddFrame(f_1st_peak_A, new TGLayoutHints(kLHintsTop,2,2,2,2));
+//   f_Main_FitPars->AddFrame(f_1st_peak_mean, new TGLayoutHints(kLHintsTop,2,2,2,2));
+//   f_Main_FitPars->AddFrame(f_1st_peak_sigm, new TGLayoutHints(kLHintsTop,2,2,2,2));
   f_Main_FitPars->AddFrame(f_1st_peak_Fit_Range, new TGLayoutHints(kLHintsTop,2,2,2,2));
-  f_Main_FitPars->AddFrame(f_2nd_peak_bgr, new TGLayoutHints(kLHintsTop,2,2,2,2));
-  f_Main_FitPars->AddFrame(f_2nd_peak_A, new TGLayoutHints(kLHintsTop,2,2,2,2));
-  f_Main_FitPars->AddFrame(f_2nd_peak_mean, new TGLayoutHints(kLHintsTop,2,2,2,2));
-  f_Main_FitPars->AddFrame(f_2nd_peak_sigm, new TGLayoutHints(kLHintsTop,2,2,2,2));
+//   f_Main_FitPars->AddFrame(f_2nd_peak_bgr, new TGLayoutHints(kLHintsTop,2,2,2,2));
+//   f_Main_FitPars->AddFrame(f_2nd_peak_A, new TGLayoutHints(kLHintsTop,2,2,2,2));
+//   f_Main_FitPars->AddFrame(f_2nd_peak_mean, new TGLayoutHints(kLHintsTop,2,2,2,2));
+//   f_Main_FitPars->AddFrame(f_2nd_peak_sigm, new TGLayoutHints(kLHintsTop,2,2,2,2));
   f_Main_FitPars->AddFrame(f_2nd_peak_Fit_Range, new TGLayoutHints(kLHintsTop,2,2,2,2));
 
   if( fit_tagger || fit_2H02A )
     {
-      f_Main_FitPars->AddFrame(f_3rd_peak_bgr, new TGLayoutHints(kLHintsTop,2,2,2,2));
-      f_Main_FitPars->AddFrame(f_3rd_peak_A, new TGLayoutHints(kLHintsTop,2,2,2,2));
-      f_Main_FitPars->AddFrame(f_3rd_peak_mean, new TGLayoutHints(kLHintsTop,2,2,2,2));
-      f_Main_FitPars->AddFrame(f_3rd_peak_sigm, new TGLayoutHints(kLHintsTop,2,2,2,2));
+//       f_Main_FitPars->AddFrame(f_3rd_peak_bgr, new TGLayoutHints(kLHintsTop,2,2,2,2));
+//       f_Main_FitPars->AddFrame(f_3rd_peak_A, new TGLayoutHints(kLHintsTop,2,2,2,2));
+//       f_Main_FitPars->AddFrame(f_3rd_peak_mean, new TGLayoutHints(kLHintsTop,2,2,2,2));
+//       f_Main_FitPars->AddFrame(f_3rd_peak_sigm, new TGLayoutHints(kLHintsTop,2,2,2,2));
       f_Main_FitPars->AddFrame(f_3rd_peak_Fit_Range, new TGLayoutHints(kLHintsTop,2,2,2,2)); 
     }
   TGHorizontalFrame *f_buttons = new TGHorizontalFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
 
+  /*
   TGTextButton *b_load_pars = new TGTextButton(f_buttons, "  &Load Parameters from Fit  ");
   b_load_pars->Connect("Clicked()", "Fitter", this, "Load_Fit_Pars()");
-  f_buttons->AddFrame(b_load_pars, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
+  //f_buttons->AddFrame(b_load_pars, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
 
   TGTextButton *b_Preview = new TGTextButton(f_buttons, " &Preview ");
   b_Preview->Connect("Clicked()", "Fitter", this, "FitData(=true, true)");
-  f_buttons->AddFrame(b_Preview, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
+  //f_buttons->AddFrame(b_Preview, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
+
+  */
 
   TGTextButton *b_Fit = new TGTextButton(f_buttons, "    &Fit    ");
   b_Fit->Connect("Clicked()", "Fitter", this, "FitData(=true, false)");
   f_buttons->AddFrame(b_Fit, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
-
-
+  
   f_Main_FitPars->AddFrame(f_buttons, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
 
 
