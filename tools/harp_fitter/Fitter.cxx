@@ -144,18 +144,36 @@ void Fitter::InitData( string fname )
       fit_2c21 = true;
       harp_name = "harp_2c21";
       scale_Xaxis = 1.;
+      min_1st_hist = 25.;
+      max_1st_hist = 29.;
+      min_2nd_hist = 49.;
+      max_2nd_hist = 57.;
     }
   else if(file_name.find("tagger") > 2 && file_name.find("tagger") < 50)
     {
       fit_tagger = true;
       harp_name = "harp_tagger";
       scale_Xaxis = 1.;
+      min_1st_hist = 11.;
+      max_1st_hist = 17.;
+      min_2nd_hist = 22.;
+      max_2nd_hist = 31.;
+      min_3rd_hist = 46.;
+      max_3rd_hist = 53.;
+
     }
   else if( file_name.find("2H02A") > 2 && file_name.find("2H02A") < 50)
     {
       fit_2H02A = true;
       harp_name = "harp_2H02A";
       scale_Xaxis = 10.;
+      min_1st_hist = 39.;
+      max_1st_hist = 46.;
+      min_2nd_hist = 58.;
+      max_2nd_hist = 65.;
+      min_3rd_hist = 76.;
+      max_3rd_hist = 82.;
+
     }
   
   cout<<"fit_tagger = "<<fit_tagger<<endl;
@@ -262,6 +280,11 @@ void Fitter::FitData( bool manual_fit, bool preview )
 	  h_1st_peak = (TH1D*)Graph2Hist(gr_[counter_ind], scale_Xaxis);
 	  
 	  h_1st_peak->SetAxisRange(range_1st_peak[0], range_1st_peak[1]);
+	  
+	  TH1D *h_bgr = (TH1D*)h_1st_peak->ShowBackground(20, "");
+	  TH1D *h_bgr_Subtr = (TH1D*)h_1st_peak->Clone("h_bgr_Subtr");
+	  h_bgr_Subtr->Add(h_bgr, -1);
+	  
 	  int l_bin = h_1st_peak->FindBin(range_1st_peak[0]);
 	  int r_bin = h_1st_peak->FindBin(range_1st_peak[1]);
 	  double max_val = h_1st_peak->GetMaximum();
@@ -270,14 +293,16 @@ void Fitter::FitData( bool manual_fit, bool preview )
 					h_1st_peak->GetBinContent(r_bin - 2) + h_1st_peak->GetBinContent(r_bin - 3) );
 	  pars_bgr_1st_peak[1] = 0.; pars_bgr_1st_peak[2] = 5*pars_bgr_1st_peak[0];
 	  
-	  pars_A_1st_peak[0] = max_val - pars_bgr_1st_peak[0];
-	  pars_A_1st_peak[1] = 0.; pars_A_1st_peak[2] = 2*max_val;
+	  
+	  pars_A_1st_peak[0] = h_bgr_Subtr->GetMaximum();// max_val - pars_bgr_1st_peak[0];
+	  pars_A_1st_peak[1] = 0.5*h_bgr_Subtr->GetMaximum(); pars_A_1st_peak[2] = 2*h_bgr_Subtr->GetMaximum(); //pars_A_1st_peak[2] = 2*max_val;
 
+	  double delt_mean_tolerance = 0.35;
 	  pars_mean_1st_peak[0] = h_1st_peak->GetBinCenter(h_1st_peak->GetMaximumBin());
-	  pars_mean_1st_peak[1] = range_1st_peak[0]; pars_mean_1st_peak[2] = range_1st_peak[1];
-
-	  pars_sigm_1st_peak[0] = h_1st_peak->GetRMS();
-	  pars_sigm_1st_peak[1] = 0.001*pars_sigm_1st_peak[0]; pars_sigm_1st_peak[2] = 10*pars_sigm_1st_peak[0];
+	  pars_mean_1st_peak[1] = pars_mean_1st_peak[0] - delt_mean_tolerance; pars_mean_1st_peak[2] = pars_mean_1st_peak[0] + delt_mean_tolerance;
+	  
+	  pars_sigm_1st_peak[0] = h_bgr_Subtr->GetRMS();
+	  pars_sigm_1st_peak[1] = 0.001*pars_sigm_1st_peak[0]; pars_sigm_1st_peak[2] = 1.1*pars_sigm_1st_peak[0];
 
 //	  pars_bgr_2nd_peak[0] = Second_peak_bgr->GetNumber(); pars_bgr_2nd_peak[1] = Second_peak_bgr_min->GetNumber(); pars_bgr_2nd_peak[2] = Second_peak_bgr_max->GetNumber();
 // 	  pars_A_2nd_peak[0] = Second_peak_A->GetNumber(); pars_A_2nd_peak[1] = Second_peak_A_min->GetNumber(); pars_A_2nd_peak[2] = Second_peak_A_max->GetNumber();
@@ -287,6 +312,11 @@ void Fitter::FitData( bool manual_fit, bool preview )
 	  
 	  h_2nd_peak = (TH1D*)h_1st_peak->Clone("h_2nd_peak");
 	  h_2nd_peak->SetAxisRange(range_2nd_peak[0], range_2nd_peak[1]);
+
+	  h_bgr = (TH1D*)h_2nd_peak->ShowBackground(20, "");
+	  h_bgr_Subtr = (TH1D*)h_2nd_peak->Clone("h_bgr_Subtr");
+	  h_bgr_Subtr->Add(h_bgr, -1);
+
 	  l_bin = h_2nd_peak->FindBin(range_2nd_peak[0]);
 	  r_bin = h_2nd_peak->FindBin(range_2nd_peak[1]);
 	  max_val = h_2nd_peak->GetMaximum();
@@ -295,14 +325,14 @@ void Fitter::FitData( bool manual_fit, bool preview )
 					h_2nd_peak->GetBinContent(r_bin - 2) + h_2nd_peak->GetBinContent(r_bin - 3) );
 	  pars_bgr_2nd_peak[1] = 0.; pars_bgr_2nd_peak[2] = 5*pars_bgr_2nd_peak[0];
 
-	  pars_A_2nd_peak[0] = max_val - pars_bgr_2nd_peak[0];
-	  pars_A_2nd_peak[1] = 0.; pars_A_2nd_peak[2] = 2*max_val;
+	  pars_A_2nd_peak[0] = h_bgr_Subtr->GetMaximum();//max_val - pars_bgr_2nd_peak[0];
+	  pars_A_2nd_peak[1] = 0.5*h_bgr_Subtr->GetMaximum(); pars_A_2nd_peak[2] = 2*h_bgr_Subtr->GetMaximum(); //2*max_val;
 
 	  pars_mean_2nd_peak[0] = h_2nd_peak->GetBinCenter(h_2nd_peak->GetMaximumBin());
-	  pars_mean_2nd_peak[1] = range_2nd_peak[0]; pars_mean_2nd_peak[2] = range_2nd_peak[1];
+	  pars_mean_2nd_peak[1] = pars_mean_2nd_peak[0] - delt_mean_tolerance; pars_mean_2nd_peak[2] = pars_mean_2nd_peak[0] + delt_mean_tolerance;
 
-	  pars_sigm_2nd_peak[0] = h_2nd_peak->GetRMS();
-	  pars_sigm_2nd_peak[1] = 0.001*pars_sigm_2nd_peak[0]; pars_sigm_2nd_peak[2] = 10*pars_sigm_2nd_peak[0];
+	  pars_sigm_2nd_peak[0] = h_bgr_Subtr->GetRMS();
+	  pars_sigm_2nd_peak[1] = 0.; pars_sigm_2nd_peak[2] = 1.1*pars_sigm_2nd_peak[0];
 	  
 	  if( fit_tagger || fit_2H02A )
 	    {
@@ -314,6 +344,11 @@ void Fitter::FitData( bool manual_fit, bool preview )
 	      
 	      h_3rd_peak = (TH1D*)h_1st_peak->Clone("h_3rd_peak");
 	      h_3rd_peak->SetAxisRange(range_3rd_peak[0], range_3rd_peak[1]);
+
+	      h_bgr = (TH1D*)h_3rd_peak->ShowBackground(20, "");
+	      h_bgr_Subtr = (TH1D*)h_3rd_peak->Clone("h_bgr_Subtr");
+	      h_bgr_Subtr->Add(h_bgr, -1);
+	      
 	      l_bin = h_3rd_peak->FindBin(range_3rd_peak[0]);
 	      r_bin = h_3rd_peak->FindBin(range_3rd_peak[1]);
 	      max_val = h_3rd_peak->GetMaximum();
@@ -322,12 +357,12 @@ void Fitter::FitData( bool manual_fit, bool preview )
 					    h_3rd_peak->GetBinContent(r_bin - 2) + h_3rd_peak->GetBinContent(r_bin - 3) );
 	      pars_bgr_3rd_peak[1] = 0.; pars_bgr_3rd_peak[2] = 5*pars_bgr_3rd_peak[0];
 	      
-	      pars_A_3rd_peak[0] = max_val - pars_bgr_3rd_peak[0];
-	      pars_A_3rd_peak[1] = 0.; pars_A_3rd_peak[2] = 2*max_val;
+	      pars_A_3rd_peak[0] = h_bgr_Subtr->GetMaximum();//max_val - pars_bgr_3rd_peak[0];
+	      pars_A_3rd_peak[1] = 0.5*h_bgr_Subtr->GetMaximum(); pars_A_3rd_peak[2] = 2*h_bgr_Subtr->GetMaximum();// 2*max_val;
 	      pars_mean_3rd_peak[0] = h_3rd_peak->GetBinCenter(h_3rd_peak->GetMaximumBin());
-	      pars_mean_3rd_peak[1] = range_3rd_peak[0]; pars_mean_3rd_peak[2] = range_3rd_peak[1];
-	      pars_sigm_3rd_peak[0] = h_3rd_peak->GetRMS();
-	      pars_sigm_3rd_peak[1] = 0.001*pars_sigm_3rd_peak[0]; pars_sigm_3rd_peak[2] = 10*pars_sigm_3rd_peak[0];
+	      pars_mean_3rd_peak[1] = pars_mean_3rd_peak[0] - delt_mean_tolerance; pars_mean_3rd_peak[2] = pars_mean_3rd_peak[0] + delt_mean_tolerance;
+	      pars_sigm_3rd_peak[0] = h_bgr_Subtr->GetRMS();
+	      pars_sigm_3rd_peak[1] = 0.001*pars_sigm_3rd_peak[0]; pars_sigm_3rd_peak[2] = 1.1*pars_sigm_3rd_peak[0];
 	    }
 	}
       else
@@ -351,6 +386,17 @@ void Fitter::FitData( bool manual_fit, bool preview )
 	    {
 	      Fit_2H02A(gr_[counter_ind], counter_names_[counter_ind]);
 	    }
+	  
+	  TCanvas *c1 = (TCanvas*)fEcanvas->GetCanvas();
+	  c1->cd(1)->Modified();
+	  c1->cd(1)->Update();
+	  c1->cd(2)->Modified();
+	  c1->cd(2)->Update();
+	  if( fit_tagger || fit_2H02A )
+	    {
+	      c1->cd(3)->Modified();
+	      c1->cd(3)->Update();
+	    }
 	}
       else
 	{
@@ -361,7 +407,13 @@ void Fitter::FitData( bool manual_fit, bool preview )
 	  gr_[counter_ind]->SetMarkerColor(2);
 	  gr_[counter_ind]->SetMarkerStyle(20);
 	  gr_[counter_ind]->SetMarkerSize(0.45);
-	  gr_[counter_ind]->Draw("AP");
+	  //gr_[counter_ind]->Draw("AP");
+
+	  TH1D *h_non_Fitted = Graph2Hist(gr_[counter_ind], scale_Xaxis);
+	  h_non_Fitted->Draw();
+	  h_non_Fitted->GetYaxis()->SetTitleOffset(1.5);
+	  h_non_Fitted->SetTitle(Form("; Motor pos (mm); Rates on %s",  counter_names_[counter_ind].c_str()));
+
 	  c1->Update();
 	}
       
@@ -393,6 +445,8 @@ int main(int argc, char **argv) {
 void Fitter::SubmitToLogbook()
 {
   TCanvas *c1 = (TCanvas*)fEcanvas->GetCanvas();
+  c1->Modified();
+  c1->Update();
   
   comments->GetText()->Save("/usr/tmp/Log_comments.txt");
 
@@ -449,295 +503,52 @@ void Fitter::Set_Fit_Pars()
   TGMainFrame *f_Main_FitPars = new TGMainFrame(gClient->GetRoot(), 100, 100, kVerticalFrame);
  
   f_Main_FitPars->SetCleanup(kDeepCleanup); // Without this line it crashes, when one close the 
-  //"Set Initial Fit Parameters" window, when the coursor is blinking in one of the numeric fields
-  /*
-  TGCompositeFrame *f_1st_peak_bgr = new TGCompositeFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
-
-  TGLabel *lbl_1st_peak_bgr = new TGLabel(f_1st_peak_bgr, "1st peak, bgr:             value");
-  f_1st_peak_bgr->AddFrame(lbl_1st_peak_bgr, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  First_peak_bgr = new TGNumberEntry(f_1st_peak_bgr, 1., 10);
-  First_peak_bgr->SetLimitValues(0., 1.e7);
-  f_1st_peak_bgr->AddFrame(First_peak_bgr, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  
-  TGLabel *lbl_1st_peak_bgr_min = new TGLabel(f_1st_peak_bgr, "       min");
-  f_1st_peak_bgr->AddFrame(lbl_1st_peak_bgr_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  First_peak_bgr_min = new TGNumberEntry(f_1st_peak_bgr, 0., 10);
-  f_1st_peak_bgr->AddFrame(First_peak_bgr_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-
-  TGLabel *lbl_1st_peak_bgr_max = new TGLabel(f_1st_peak_bgr, "       max");
-  f_1st_peak_bgr->AddFrame(lbl_1st_peak_bgr_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  First_peak_bgr_max = new TGNumberEntry(f_1st_peak_bgr, 1000000., 10);
-  f_1st_peak_bgr->AddFrame(First_peak_bgr_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-
-  TGCompositeFrame *f_1st_peak_A = new TGCompositeFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
-
-  TGLabel *lbl_1st_peak_A = new TGLabel(f_1st_peak_A, "1st peak, Amplitude:    value");
-  f_1st_peak_A->AddFrame(lbl_1st_peak_A, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  First_peak_A = new TGNumberEntry(f_1st_peak_A, 1., 10);
-  First_peak_A->SetLimitValues(0., 1.e7);
-  f_1st_peak_A->AddFrame(First_peak_A, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  
-  TGLabel *lbl_1st_peak_A_min = new TGLabel(f_1st_peak_A, "       min");
-  f_1st_peak_A->AddFrame(lbl_1st_peak_A_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  First_peak_A_min = new TGNumberEntry(f_1st_peak_A, 0., 10);
-  f_1st_peak_A->AddFrame(First_peak_A_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-
-  TGLabel *lbl_1st_peak_A_max = new TGLabel(f_1st_peak_A, "       max");
-  f_1st_peak_A->AddFrame(lbl_1st_peak_A_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  First_peak_A_max = new TGNumberEntry(f_1st_peak_A, 1000000., 10);
-  f_1st_peak_A->AddFrame(First_peak_A_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-
-  TGCompositeFrame *f_1st_peak_mean = new TGCompositeFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
-
-  TGLabel *lbl_1st_peak_mean = new TGLabel(f_1st_peak_mean, "1st peak, mean:          value");
-  f_1st_peak_mean->AddFrame(lbl_1st_peak_mean, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  First_peak_mean = new TGNumberEntry(f_1st_peak_mean, 25., 10);
-  First_peak_mean->SetLimitValues(0., 1.e7);
-  f_1st_peak_mean->AddFrame(First_peak_mean, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  
-  TGLabel *lbl_1st_peak_mean_min = new TGLabel(f_1st_peak_mean, "       min");
-  f_1st_peak_mean->AddFrame(lbl_1st_peak_mean_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  First_peak_mean_min = new TGNumberEntry(f_1st_peak_mean, 0., 10);
-  f_1st_peak_mean->AddFrame(First_peak_mean_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-
-  TGLabel *lbl_1st_peak_mean_max = new TGLabel(f_1st_peak_mean, "       max");
-  f_1st_peak_mean->AddFrame(lbl_1st_peak_mean_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  First_peak_mean_max = new TGNumberEntry(f_1st_peak_mean, 60., 10);
-  f_1st_peak_mean->AddFrame(First_peak_mean_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-
-
-  TGCompositeFrame *f_1st_peak_sigm = new TGCompositeFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
-
-  TGLabel *lbl_1st_peak_sigm = new TGLabel(f_1st_peak_sigm, "1st peak, sigm:           value");
-  f_1st_peak_sigm->AddFrame(lbl_1st_peak_sigm, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  First_peak_sigm = new TGNumberEntry(f_1st_peak_sigm, 0.1, 10);
-  First_peak_sigm->SetLimitValues(0., 1.e7);
-  f_1st_peak_sigm->AddFrame(First_peak_sigm, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  
-  TGLabel *lbl_1st_peak_sigm_min = new TGLabel(f_1st_peak_sigm, "       min");
-  f_1st_peak_sigm->AddFrame(lbl_1st_peak_sigm_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  First_peak_sigm_min = new TGNumberEntry(f_1st_peak_sigm, 0., 10);
-  f_1st_peak_sigm->AddFrame(First_peak_sigm_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-
-  TGLabel *lbl_1st_peak_sigm_max = new TGLabel(f_1st_peak_sigm, "       max");
-  f_1st_peak_sigm->AddFrame(lbl_1st_peak_sigm_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  First_peak_sigm_max = new TGNumberEntry(f_1st_peak_sigm, 1., 10);
-  f_1st_peak_sigm->AddFrame(First_peak_sigm_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-*/
   //  TGHorizontalFrame *f_buttons =            new TGHorizontalFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
   TGHorizontalFrame *f_1st_peak_Fit_Range = new TGHorizontalFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
   TGLabel *lbl_1st_peak_Fit_Range_min = new TGLabel(f_1st_peak_Fit_Range, "1st Peak Fit Range:        min");
   f_1st_peak_Fit_Range->AddFrame(lbl_1st_peak_Fit_Range_min);
-  First_peak_range_min = new TGNumberEntry(f_1st_peak_Fit_Range, 5., 10);
+  First_peak_range_min = new TGNumberEntry(f_1st_peak_Fit_Range, min_1st_hist, 10);
   f_1st_peak_Fit_Range->AddFrame(First_peak_range_min,  new TGLayoutHints(kLHintsCenterX,2,2,2,2));
 
   TGLabel *lbl_1st_peak_Fit_Range_max = new TGLabel(f_1st_peak_Fit_Range, "      max:");
   f_1st_peak_Fit_Range->AddFrame(lbl_1st_peak_Fit_Range_max);
-  First_peak_range_max = new TGNumberEntry(f_1st_peak_Fit_Range, 25., 10);
+  First_peak_range_max = new TGNumberEntry(f_1st_peak_Fit_Range, max_1st_hist, 10);
   f_1st_peak_Fit_Range->AddFrame(First_peak_range_max,  new TGLayoutHints(kLHintsCenterX,2,2,2,2));
   
-  /*
-  TGCompositeFrame *f_2nd_peak_bgr = new TGCompositeFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
 
-  TGLabel *lbl_2nd_peak_bgr = new TGLabel(f_2nd_peak_bgr, "2nd peak, bgr:            value");
-  f_2nd_peak_bgr->AddFrame(lbl_2nd_peak_bgr, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Second_peak_bgr = new TGNumberEntry(f_2nd_peak_bgr, 1., 10);
-  Second_peak_bgr->SetLimitValues(0., 1.e7);
-  f_2nd_peak_bgr->AddFrame(Second_peak_bgr, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  
-  TGLabel *lbl_2nd_peak_bgr_min = new TGLabel(f_2nd_peak_bgr, "       min");
-  f_2nd_peak_bgr->AddFrame(lbl_2nd_peak_bgr_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Second_peak_bgr_min = new TGNumberEntry(f_2nd_peak_bgr, 0., 10);
-  f_2nd_peak_bgr->AddFrame(Second_peak_bgr_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-
-  TGLabel *lbl_2nd_peak_bgr_max = new TGLabel(f_2nd_peak_bgr, "       max");
-  f_2nd_peak_bgr->AddFrame(lbl_2nd_peak_bgr_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Second_peak_bgr_max = new TGNumberEntry(f_2nd_peak_bgr, 1000000., 10);
-  f_2nd_peak_bgr->AddFrame(Second_peak_bgr_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-
-  TGCompositeFrame *f_2nd_peak_A = new TGCompositeFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
-
-  TGLabel *lbl_2nd_peak_A = new TGLabel(f_2nd_peak_A, "2nd peak, Amplitude:   value");
-  f_2nd_peak_A->AddFrame(lbl_2nd_peak_A, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Second_peak_A = new TGNumberEntry(f_2nd_peak_A, 1., 10);
-  Second_peak_A->SetLimitValues(0., 1.e7);
-  f_2nd_peak_A->AddFrame(Second_peak_A, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  
-  TGLabel *lbl_2nd_peak_A_min = new TGLabel(f_2nd_peak_A, "       min");
-  f_2nd_peak_A->AddFrame(lbl_2nd_peak_A_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Second_peak_A_min = new TGNumberEntry(f_2nd_peak_A, 0., 10);
-  f_2nd_peak_A->AddFrame(Second_peak_A_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-
-  TGLabel *lbl_2nd_peak_A_max = new TGLabel(f_2nd_peak_A, "       max");
-  f_2nd_peak_A->AddFrame(lbl_2nd_peak_A_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Second_peak_A_max = new TGNumberEntry(f_2nd_peak_A, 1000000., 10);
-  f_2nd_peak_A->AddFrame(Second_peak_A_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-
-  TGCompositeFrame *f_2nd_peak_mean = new TGCompositeFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
-
-  TGLabel *lbl_2nd_peak_mean = new TGLabel(f_2nd_peak_mean, "2nd peak, mean:         value");
-  f_2nd_peak_mean->AddFrame(lbl_2nd_peak_mean, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Second_peak_mean = new TGNumberEntry(f_2nd_peak_mean, 45., 10);
-  Second_peak_mean->SetLimitValues(0., 1.e7);
-  f_2nd_peak_mean->AddFrame(Second_peak_mean, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  
-  TGLabel *lbl_2nd_peak_mean_min = new TGLabel(f_2nd_peak_mean, "       min");
-  f_2nd_peak_mean->AddFrame(lbl_2nd_peak_mean_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Second_peak_mean_min = new TGNumberEntry(f_2nd_peak_mean, 0., 10);
-  f_2nd_peak_mean->AddFrame(Second_peak_mean_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-
-  TGLabel *lbl_2nd_peak_mean_max = new TGLabel(f_2nd_peak_mean, "       max");
-  f_2nd_peak_mean->AddFrame(lbl_2nd_peak_mean_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Second_peak_mean_max = new TGNumberEntry(f_2nd_peak_mean, 70., 10);
-  f_2nd_peak_mean->AddFrame(Second_peak_mean_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  TGCompositeFrame *f_2nd_peak_sigm = new TGCompositeFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
-
-  TGLabel *lbl_2nd_peak_sigm = new TGLabel(f_2nd_peak_sigm, "2nd peak, sigm:          value");
-  f_2nd_peak_sigm->AddFrame(lbl_2nd_peak_sigm, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Second_peak_sigm = new TGNumberEntry(f_2nd_peak_sigm, 0.1, 10);
-  Second_peak_sigm->SetLimitValues(0., 1.e7);
-  f_2nd_peak_sigm->AddFrame(Second_peak_sigm, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  
-  TGLabel *lbl_2nd_peak_sigm_min = new TGLabel(f_2nd_peak_sigm, "       min");
-  f_2nd_peak_sigm->AddFrame(lbl_2nd_peak_sigm_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Second_peak_sigm_min = new TGNumberEntry(f_2nd_peak_sigm, 0., 10);
-  f_2nd_peak_sigm->AddFrame(Second_peak_sigm_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-
-  TGLabel *lbl_2nd_peak_sigm_max = new TGLabel(f_2nd_peak_sigm, "       max");
-  f_2nd_peak_sigm->AddFrame(lbl_2nd_peak_sigm_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Second_peak_sigm_max = new TGNumberEntry(f_2nd_peak_sigm, 1., 10);
-  f_2nd_peak_sigm->AddFrame(Second_peak_sigm_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-*/
-
-  
   TGHorizontalFrame *f_2nd_peak_Fit_Range = new TGHorizontalFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
   TGLabel *lbl_2nd_peak_Fit_Range_min = new TGLabel(f_2nd_peak_Fit_Range, "2nd Peak Fit Range:        min");
   f_2nd_peak_Fit_Range->AddFrame(lbl_2nd_peak_Fit_Range_min);
-  Second_peak_range_min = new TGNumberEntry(f_2nd_peak_Fit_Range, 25., 10);
+  Second_peak_range_min = new TGNumberEntry(f_2nd_peak_Fit_Range, min_2nd_hist, 10);
   f_2nd_peak_Fit_Range->AddFrame(Second_peak_range_min,  new TGLayoutHints(kLHintsCenterX,2,2,2,2));
 
   TGLabel *lbl_2nd_peak_Fit_Range_max = new TGLabel(f_2nd_peak_Fit_Range, "      max:");
   f_2nd_peak_Fit_Range->AddFrame(lbl_2nd_peak_Fit_Range_max);
-  Second_peak_range_max = new TGNumberEntry(f_2nd_peak_Fit_Range, 45., 10);
+  Second_peak_range_max = new TGNumberEntry(f_2nd_peak_Fit_Range, max_2nd_hist, 10);
   f_2nd_peak_Fit_Range->AddFrame(Second_peak_range_max,  new TGLayoutHints(kLHintsCenterX,2,2,2,2));
 
-  /*
-  TGCompositeFrame *f_3rd_peak_bgr = new TGCompositeFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
-
-  TGLabel *lbl_3rd_peak_bgr = new TGLabel(f_3rd_peak_bgr, "3rd peak, bgr:            value");
-  f_3rd_peak_bgr->AddFrame(lbl_3rd_peak_bgr, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Third_peak_bgr = new TGNumberEntry(f_3rd_peak_bgr, 1., 10);
-  Third_peak_bgr->SetLimitValues(0., 1.e7);
-  f_3rd_peak_bgr->AddFrame(Third_peak_bgr, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  
-  TGLabel *lbl_3rd_peak_bgr_min = new TGLabel(f_3rd_peak_bgr, "       min");
-  f_3rd_peak_bgr->AddFrame(lbl_3rd_peak_bgr_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Third_peak_bgr_min = new TGNumberEntry(f_3rd_peak_bgr, 0., 10);
-  f_3rd_peak_bgr->AddFrame(Third_peak_bgr_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-
-  TGLabel *lbl_3rd_peak_bgr_max = new TGLabel(f_3rd_peak_bgr, "       max");
-  f_3rd_peak_bgr->AddFrame(lbl_3rd_peak_bgr_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Third_peak_bgr_max = new TGNumberEntry(f_3rd_peak_bgr, 1000000., 10);
-  f_3rd_peak_bgr->AddFrame(Third_peak_bgr_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-
-  TGCompositeFrame *f_3rd_peak_A = new TGCompositeFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
-
-  TGLabel *lbl_3rd_peak_A = new TGLabel(f_3rd_peak_A, "3rd peak, Amplitude:   value");
-  f_3rd_peak_A->AddFrame(lbl_3rd_peak_A, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Third_peak_A = new TGNumberEntry(f_3rd_peak_A, 1., 10);
-  Third_peak_A->SetLimitValues(0., 1.e7);
-  f_3rd_peak_A->AddFrame(Third_peak_A, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  
-  TGLabel *lbl_3rd_peak_A_min = new TGLabel(f_3rd_peak_A, "       min");
-  f_3rd_peak_A->AddFrame(lbl_3rd_peak_A_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Third_peak_A_min = new TGNumberEntry(f_3rd_peak_A, 0., 10);
-  f_3rd_peak_A->AddFrame(Third_peak_A_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-
-  TGLabel *lbl_3rd_peak_A_max = new TGLabel(f_3rd_peak_A, "       max");
-  f_3rd_peak_A->AddFrame(lbl_3rd_peak_A_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Third_peak_A_max = new TGNumberEntry(f_3rd_peak_A, 1000000., 10);
-  f_3rd_peak_A->AddFrame(Third_peak_A_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-
-  TGCompositeFrame *f_3rd_peak_mean = new TGCompositeFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
-
-  TGLabel *lbl_3rd_peak_mean = new TGLabel(f_3rd_peak_mean, "3rd peak, mean:         value");
-  f_3rd_peak_mean->AddFrame(lbl_3rd_peak_mean, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Third_peak_mean = new TGNumberEntry(f_3rd_peak_mean, 65., 10);
-  Third_peak_mean->SetLimitValues(0., 1.e7);
-  f_3rd_peak_mean->AddFrame(Third_peak_mean, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  
-  TGLabel *lbl_3rd_peak_mean_min = new TGLabel(f_3rd_peak_mean, "       min");
-  f_3rd_peak_mean->AddFrame(lbl_3rd_peak_mean_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Third_peak_mean_min = new TGNumberEntry(f_3rd_peak_mean, 45., 10);
-  f_3rd_peak_mean->AddFrame(Third_peak_mean_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-
-  TGLabel *lbl_3rd_peak_mean_max = new TGLabel(f_3rd_peak_mean, "       max");
-  f_3rd_peak_mean->AddFrame(lbl_3rd_peak_mean_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Third_peak_mean_max = new TGNumberEntry(f_3rd_peak_mean, 95., 10);
-  f_3rd_peak_mean->AddFrame(Third_peak_mean_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  TGCompositeFrame *f_3rd_peak_sigm = new TGCompositeFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
-
-  TGLabel *lbl_3rd_peak_sigm = new TGLabel(f_3rd_peak_sigm, "3rd peak, sigm:          value");
-  f_3rd_peak_sigm->AddFrame(lbl_3rd_peak_sigm, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Third_peak_sigm = new TGNumberEntry(f_3rd_peak_sigm, 0.1, 10);
-  Third_peak_sigm->SetLimitValues(0., 1.e7);
-  f_3rd_peak_sigm->AddFrame(Third_peak_sigm, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  
-  TGLabel *lbl_3rd_peak_sigm_min = new TGLabel(f_3rd_peak_sigm, "       min");
-  f_3rd_peak_sigm->AddFrame(lbl_3rd_peak_sigm_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Third_peak_sigm_min = new TGNumberEntry(f_3rd_peak_sigm, 0., 10);
-  f_3rd_peak_sigm->AddFrame(Third_peak_sigm_min, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-
-  TGLabel *lbl_3rd_peak_sigm_max = new TGLabel(f_3rd_peak_sigm, "       max");
-  f_3rd_peak_sigm->AddFrame(lbl_3rd_peak_sigm_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  Third_peak_sigm_max = new TGNumberEntry(f_3rd_peak_sigm, 1., 10);
-  f_3rd_peak_sigm->AddFrame(Third_peak_sigm_max, new TGLayoutHints(kLHintsLeft,2,2,2,2));
-  */
 
   TGHorizontalFrame *f_3rd_peak_Fit_Range = new TGHorizontalFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
   TGLabel *lbl_3rd_peak_Fit_Range_min = new TGLabel(f_3rd_peak_Fit_Range, "3rd Peak Fit Range:        min");
   f_3rd_peak_Fit_Range->AddFrame(lbl_3rd_peak_Fit_Range_min);
-  Third_peak_range_min = new TGNumberEntry(f_3rd_peak_Fit_Range, 5., 10);
+  Third_peak_range_min = new TGNumberEntry(f_3rd_peak_Fit_Range, min_3rd_hist, 10);
   f_3rd_peak_Fit_Range->AddFrame(Third_peak_range_min,  new TGLayoutHints(kLHintsCenterX,2,2,2,2));
 
   TGLabel *lbl_3rd_peak_Fit_Range_max = new TGLabel(f_3rd_peak_Fit_Range, "      max:");
   f_3rd_peak_Fit_Range->AddFrame(lbl_3rd_peak_Fit_Range_max);
-  Third_peak_range_max = new TGNumberEntry(f_3rd_peak_Fit_Range, 25., 10);
+  Third_peak_range_max = new TGNumberEntry(f_3rd_peak_Fit_Range, max_3rd_hist, 10);
   f_3rd_peak_Fit_Range->AddFrame(Third_peak_range_max,  new TGLayoutHints(kLHintsCenterX,2,2,2,2));
 
 
-//   f_Main_FitPars->AddFrame(f_1st_peak_bgr, new TGLayoutHints(kLHintsTop,2,2,2,2));
-//   f_Main_FitPars->AddFrame(f_1st_peak_A, new TGLayoutHints(kLHintsTop,2,2,2,2));
-//   f_Main_FitPars->AddFrame(f_1st_peak_mean, new TGLayoutHints(kLHintsTop,2,2,2,2));
-//   f_Main_FitPars->AddFrame(f_1st_peak_sigm, new TGLayoutHints(kLHintsTop,2,2,2,2));
   f_Main_FitPars->AddFrame(f_1st_peak_Fit_Range, new TGLayoutHints(kLHintsTop,2,2,2,2));
-//   f_Main_FitPars->AddFrame(f_2nd_peak_bgr, new TGLayoutHints(kLHintsTop,2,2,2,2));
-//   f_Main_FitPars->AddFrame(f_2nd_peak_A, new TGLayoutHints(kLHintsTop,2,2,2,2));
-//   f_Main_FitPars->AddFrame(f_2nd_peak_mean, new TGLayoutHints(kLHintsTop,2,2,2,2));
-//   f_Main_FitPars->AddFrame(f_2nd_peak_sigm, new TGLayoutHints(kLHintsTop,2,2,2,2));
   f_Main_FitPars->AddFrame(f_2nd_peak_Fit_Range, new TGLayoutHints(kLHintsTop,2,2,2,2));
 
   if( fit_tagger || fit_2H02A )
     {
-//       f_Main_FitPars->AddFrame(f_3rd_peak_bgr, new TGLayoutHints(kLHintsTop,2,2,2,2));
-//       f_Main_FitPars->AddFrame(f_3rd_peak_A, new TGLayoutHints(kLHintsTop,2,2,2,2));
-//       f_Main_FitPars->AddFrame(f_3rd_peak_mean, new TGLayoutHints(kLHintsTop,2,2,2,2));
-//       f_Main_FitPars->AddFrame(f_3rd_peak_sigm, new TGLayoutHints(kLHintsTop,2,2,2,2));
       f_Main_FitPars->AddFrame(f_3rd_peak_Fit_Range, new TGLayoutHints(kLHintsTop,2,2,2,2)); 
     }
   TGHorizontalFrame *f_buttons = new TGHorizontalFrame(f_Main_FitPars, 70, 4, kHorizontalFrame );
-
-  /*
-  TGTextButton *b_load_pars = new TGTextButton(f_buttons, "  &Load Parameters from Fit  ");
-  b_load_pars->Connect("Clicked()", "Fitter", this, "Load_Fit_Pars()");
-  //f_buttons->AddFrame(b_load_pars, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
-
-  TGTextButton *b_Preview = new TGTextButton(f_buttons, " &Preview ");
-  b_Preview->Connect("Clicked()", "Fitter", this, "FitData(=true, true)");
-  //f_buttons->AddFrame(b_Preview, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
-
-  */
-
+  
   TGTextButton *b_Fit = new TGTextButton(f_buttons, "    &Fit    ");
   b_Fit->Connect("Clicked()", "Fitter", this, "FitData(=true, false)");
   f_buttons->AddFrame(b_Fit, new TGLayoutHints(kLHintsCenterX,2,2,2,2));
@@ -1488,7 +1299,15 @@ TH1D* Fitter::Graph2Hist(TGraph * gr, double scale)
   //cout<<"xlow is "<<x_low<<"    x_high is "<<x_high<<endl;
 
   h_gr_tmp->FillN(n_points, x_axis2, y_axis);
-  h_gr_tmp->SetStats(0);
+  //h_gr_tmp->SetStats(0);
+
+  
+  h_gr_tmp->SetLabelSize(0.055, "X");
+  h_gr_tmp->SetLabelSize(0.055, "Y");
+  h_gr_tmp->SetTitleSize(0.055, "X");
+  h_gr_tmp->SetTitleSize(0.055, "Y");
+  h_gr_tmp->SetTitleOffset(0.8, "X");
+	  
   cout<<"NbinsX = "<<h_gr_tmp->GetNbinsX()<<endl;
   
   return h_gr_tmp;

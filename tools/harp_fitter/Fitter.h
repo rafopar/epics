@@ -68,6 +68,11 @@ private:
   double *pars_bgr_2nd_peak, *pars_A_2nd_peak, *pars_mean_2nd_peak, *pars_sigm_2nd_peak, *range_2nd_peak;
   double *pars_bgr_3rd_peak, *pars_A_3rd_peak, *pars_mean_3rd_peak, *pars_sigm_3rd_peak, *range_3rd_peak;
 
+  //========= Default parameters for "Set Fit Ranges" window =================
+  double min_1st_hist, max_1st_hist;
+  double min_2nd_hist, max_2nd_hist;
+  double min_3rd_hist, max_3rd_hist;
+
   double scale_Xaxis;
 
 public:
